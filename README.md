@@ -18,6 +18,8 @@ docker-compose up --build
 # Linting & Formatting (Ruff)
 
 ## --- Start venv and make sure ruff is installed ---
+Go into backend directory: `cd backend`
+
 Create venv: `python3 -m venv venv`
 
 Activate venv: `source venv/bin/activate`

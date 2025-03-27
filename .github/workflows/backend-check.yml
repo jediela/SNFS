@@ -3,6 +3,7 @@ name: Lint & Format Check
 on:
   pull_request:
     branches: [ "**" ]
+    paths: '**.py'
 
 jobs:
   ruff:
