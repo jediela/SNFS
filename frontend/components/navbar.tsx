@@ -13,32 +13,24 @@ import {
     MenubarSubTrigger,
     MenubarTrigger,
 } from '@/components/ui/menubar'
+import Link from 'next/link'
 
 export default function Navbar() {
     return (
-        <Menubar>
+        <Menubar className="p-8 sticky top-0">
             <MenubarMenu>
-                <MenubarTrigger>File</MenubarTrigger>
+                <MenubarTrigger className="text-2xl font-bold">
+                    <Link href="/">SNFS</Link>
+                </MenubarTrigger>
+            </MenubarMenu>
+            <MenubarMenu>
+                <MenubarTrigger>User Routes</MenubarTrigger>
                 <MenubarContent>
-                    <MenubarItem>
-                        New Tab <MenubarShortcut>⌘T</MenubarShortcut>
+                    <MenubarItem asChild>
+                        <Link href="/users/register">Register</Link>
                     </MenubarItem>
-                    <MenubarItem>
-                        New Window <MenubarShortcut>⌘N</MenubarShortcut>
-                    </MenubarItem>
-                    <MenubarItem disabled>New Incognito Window</MenubarItem>
-                    <MenubarSeparator />
-                    <MenubarSub>
-                        <MenubarSubTrigger>Share</MenubarSubTrigger>
-                        <MenubarSubContent>
-                            <MenubarItem>Email link</MenubarItem>
-                            <MenubarItem>Messages</MenubarItem>
-                            <MenubarItem>Notes</MenubarItem>
-                        </MenubarSubContent>
-                    </MenubarSub>
-                    <MenubarSeparator />
-                    <MenubarItem>
-                        Print... <MenubarShortcut>⌘P</MenubarShortcut>
+                    <MenubarItem asChild>
+                        <Link href="/users/login">Login</Link>
                     </MenubarItem>
                 </MenubarContent>
             </MenubarMenu>
