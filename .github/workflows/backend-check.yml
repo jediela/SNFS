@@ -2,8 +2,9 @@ name: Backend Checks
 
 on:
   pull_request:
-    branches: [ "**" ]
-    paths: '**.py'
+    branches: ['main']
+    paths: 
+      - 'backend/**/*.py'
 
 jobs:
   ruff:
