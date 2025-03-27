@@ -22,13 +22,13 @@ services:
     environment:
       - FLASK_ENV=development
 
-  # frontend:
-  #   build: ./frontend 
-  #   container_name: snfs_frontend
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - backend
+  frontend:
+    build: ./frontend 
+    container_name: snfs_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
