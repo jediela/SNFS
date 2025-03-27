@@ -35,29 +35,20 @@ export default function Navbar() {
                 </MenubarContent>
             </MenubarMenu>
             <MenubarMenu>
-                <MenubarTrigger>Edit</MenubarTrigger>
+                <MenubarTrigger>Review Routes</MenubarTrigger>
                 <MenubarContent>
                     <MenubarItem>
-                        Undo <MenubarShortcut>⌘Z</MenubarShortcut>
+                        <Link href="/reviews/view">View Reviews</Link>
                     </MenubarItem>
                     <MenubarItem>
-                        Redo <MenubarShortcut>⇧⌘Z</MenubarShortcut>
+                        <Link href="/reviews/write">Write Review</Link>
                     </MenubarItem>
-                    <MenubarSeparator />
-                    <MenubarSub>
-                        <MenubarSubTrigger>Find</MenubarSubTrigger>
-                        <MenubarSubContent>
-                            <MenubarItem>Search the web</MenubarItem>
-                            <MenubarSeparator />
-                            <MenubarItem>Find...</MenubarItem>
-                            <MenubarItem>Find Next</MenubarItem>
-                            <MenubarItem>Find Previous</MenubarItem>
-                        </MenubarSubContent>
-                    </MenubarSub>
-                    <MenubarSeparator />
-                    <MenubarItem>Cut</MenubarItem>
-                    <MenubarItem>Copy</MenubarItem>
-                    <MenubarItem>Paste</MenubarItem>
+                    <MenubarItem>
+                        <Link href="/reviews/edit">Edit Review</Link>
+                    </MenubarItem>
+                    <MenubarItem>
+                        <Link href="/reviews/delete">Delete Review</Link>
+                    </MenubarItem>
                 </MenubarContent>
             </MenubarMenu>
             <MenubarMenu>
