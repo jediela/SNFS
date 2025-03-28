@@ -1,7 +1,7 @@
 services:
   db:
-    image: postgres:15
-    container_name: postgres_db
+    image: postgres:17
+    container_name: snfs_postgres_db
     environment:
       POSTGRES_USER: c43
       POSTGRES_PASSWORD: c43
@@ -12,16 +12,23 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
 
-
-  web:
-    build: .
-    container_name: flask_app
+  backend:
+    build: ./backend
+    container_name: snfs_backend
     ports:
       - "8000:8000"
     depends_on:
       - db
     environment:
       - FLASK_ENV=development
+
+  frontend:
+    build: ./frontend 
+    container_name: snfs_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:

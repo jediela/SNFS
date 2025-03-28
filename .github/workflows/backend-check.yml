@@ -1,8 +1,10 @@
-name: Lint & Format Check
+name: Backend Checks
 
 on:
   pull_request:
-    branches: [ "**" ]
+    branches: ['main']
+    paths: 
+      - 'backend/**/*.py'
 
 jobs:
   ruff:
