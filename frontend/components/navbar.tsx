@@ -1,13 +1,8 @@
 import {
     Menubar,
-    MenubarCheckboxItem,
     MenubarContent,
     MenubarItem,
     MenubarMenu,
-    MenubarRadioGroup,
-    MenubarRadioItem,
-    MenubarSeparator,
-    MenubarShortcut,
     MenubarTrigger,
 } from '@/components/ui/menubar'
 import Link from 'next/link'
@@ -21,7 +16,7 @@ export default function Navbar() {
                 </MenubarTrigger>
             </MenubarMenu>
             <MenubarMenu>
-                <MenubarTrigger>User Routes</MenubarTrigger>
+                <MenubarTrigger>Users</MenubarTrigger>
                 <MenubarContent>
                     <MenubarItem asChild>
                         <Link href="/users/register">Register</Link>
@@ -29,10 +24,24 @@ export default function Navbar() {
                     <MenubarItem asChild>
                         <Link href="/users/login">Login</Link>
                     </MenubarItem>
+                    <MenubarItem asChild>
+                        <Link href="/users/portfolio">View Portfolio</Link>
+                    </MenubarItem>
                 </MenubarContent>
             </MenubarMenu>
             <MenubarMenu>
-                <MenubarTrigger>Review Routes</MenubarTrigger>
+                <MenubarTrigger>Requests</MenubarTrigger>
+                <MenubarContent>
+                    <MenubarItem asChild>
+                        <Link href="/requests/view">View Requests</Link>
+                    </MenubarItem>
+                    <MenubarItem asChild>
+                        <Link href="/requests/send">Send Request</Link>
+                    </MenubarItem>
+                </MenubarContent>
+            </MenubarMenu>
+            <MenubarMenu>
+                <MenubarTrigger>Reviews</MenubarTrigger>
                 <MenubarContent>
                     <MenubarItem>
                         <Link href="/reviews/view">View Reviews</Link>
@@ -46,44 +55,6 @@ export default function Navbar() {
                     <MenubarItem>
                         <Link href="/reviews/delete">Delete Review</Link>
                     </MenubarItem>
-                </MenubarContent>
-            </MenubarMenu>
-            <MenubarMenu>
-                <MenubarTrigger>View</MenubarTrigger>
-                <MenubarContent>
-                    <MenubarCheckboxItem>
-                        Always Show Bookmarks Bar
-                    </MenubarCheckboxItem>
-                    <MenubarCheckboxItem checked>
-                        Always Show Full URLs
-                    </MenubarCheckboxItem>
-                    <MenubarSeparator />
-                    <MenubarItem inset>
-                        Reload <MenubarShortcut>⌘R</MenubarShortcut>
-                    </MenubarItem>
-                    <MenubarItem disabled inset>
-                        Force Reload <MenubarShortcut>⇧⌘R</MenubarShortcut>
-                    </MenubarItem>
-                    <MenubarSeparator />
-                    <MenubarItem inset>Toggle Fullscreen</MenubarItem>
-                    <MenubarSeparator />
-                    <MenubarItem inset>Hide Sidebar</MenubarItem>
-                </MenubarContent>
-            </MenubarMenu>
-            <MenubarMenu>
-                <MenubarTrigger>Profiles</MenubarTrigger>
-                <MenubarContent>
-                    <MenubarRadioGroup value="benoit">
-                        <MenubarRadioItem value="andy">Andy</MenubarRadioItem>
-                        <MenubarRadioItem value="benoit">
-                            Benoit
-                        </MenubarRadioItem>
-                        <MenubarRadioItem value="Luis">Luis</MenubarRadioItem>
-                    </MenubarRadioGroup>
-                    <MenubarSeparator />
-                    <MenubarItem inset>Edit...</MenubarItem>
-                    <MenubarSeparator />
-                    <MenubarItem inset>Add Profile...</MenubarItem>
                 </MenubarContent>
             </MenubarMenu>
         </Menubar>
