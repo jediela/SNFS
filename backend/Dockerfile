@@ -19,4 +19,4 @@ ENV FLASK_RUN_HOST=0.0.0.0
 ENV FLASK_RUN_PORT=8000
 
 # Run the Flask app
-CMD ["flask", "run"]
+CMD ["flask", "run", "--reload"]
