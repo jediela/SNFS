@@ -82,6 +82,23 @@ CREATE TABLE StockListItems (
     PRIMARY KEY (list_id, symbol)
 );
 
+-- Stock Holdings table
+CREATE TABLE StockHoldings (
+    portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
+    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
+    num_shares INT NOT NULL CHECK (num_shares >= 0),
+    PRIMARY KEY (portfolio_id, symbol)
+);
+
+-- Stock Predictions table
+CREATE TABLE StockPredictions (
+    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
+    future_date DATE NOT NULL,
+    predicted_close DECIMAL(15, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (symbol, created_at, future_date)
+);
+
 -- Review table
 CREATE TABLE Reviews (
     review_id SERIAL PRIMARY KEY,
