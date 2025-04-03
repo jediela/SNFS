@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS Portfolios (
 );
 
 -- Cash Transaction table
-CREATE TABLE CashTransactions (
+CREATE TABLE IF NOT EXISTS CashTransactions (
     transaction_id SERIAL PRIMARY KEY,
     portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
     type VARCHAR(10) CHECK (type IN ('deposit', 'withdrawal')),
@@ -36,14 +36,33 @@ CREATE TABLE CashTransactions (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Stock Holdings table
+CREATE TABLE IF NOT EXISTS StockHoldings (
+    portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
+    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
+    num_shares INT NOT NULL CHECK (num_shares >= 0),
+    PRIMARY KEY (portfolio_id, symbol)
+);
+
+-- Stock Transaction table
+CREATE TABLE IF NOT EXISTS StockTransactions (
+    transaction_id SERIAL PRIMARY KEY,
+    portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
+    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
+    type VARCHAR(10) CHECK (type IN ('buy', 'sell')),
+    num_shares INT NOT NULL CHECK (num_shares > 0),
+    price DECIMAL(15, 2) NOT NULL,  -- Price per share at transaction time
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Stock table
-CREATE TABLE Stocks (
-    symbol VARCHAR(10) PRIMARY KEY, -- Changed to symbol (unique identifier)
+CREATE TABLE IF NOT EXISTS Stocks (
+    symbol VARCHAR(10) PRIMARY KEY,
     company_name VARCHAR(100) NOT NULL
 );
 
 -- Stock Prices table
-CREATE TABLE StockPrices (
+CREATE TABLE IF NOT EXISTS StockPrices (
     symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
     date DATE NOT NULL,
     open DECIMAL(15, 2) NOT NULL,
@@ -54,20 +73,17 @@ CREATE TABLE StockPrices (
     PRIMARY KEY (symbol, date)  -- Unique price per symbol per day
 );
 
-
--- Stock Transaction table
-CREATE TABLE StockTransactions (
-    transaction_id SERIAL PRIMARY KEY,
-    portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
+-- Stock Predictions table
+CREATE TABLE IF NOT EXISTS StockPredictions (
     symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
-    type VARCHAR(10) CHECK (type IN ('buy', 'sell')),
-    num_shares INT NOT NULL CHECK (num_shares > 0),
-    price DECIMAL(15, 2) NOT NULL,  -- Price per share at transaction time
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    prediction_date DATE NOT NULL,
+    future_date DATE NOT NULL,
+    predicted_close DECIMAL(15, 2) NOT NULL,
+    PRIMARY KEY (symbol, prediction_date, future_date)
 );
 
 -- Stock List table
-CREATE TABLE StockLists (
+CREATE TABLE IF NOT EXISTS StockLists (
     list_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
     name VARCHAR(50) NOT NULL,
@@ -75,32 +91,15 @@ CREATE TABLE StockLists (
 );
 
 -- Stock List Item table
-CREATE TABLE StockListItems (
+CREATE TABLE IF NOT EXISTS StockListItems (
     list_id INT NOT NULL REFERENCES StockLists(list_id) ON DELETE CASCADE,
     symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
     num_shares INT NOT NULL CHECK (num_shares >= 0),
     PRIMARY KEY (list_id, symbol)
 );
 
--- Stock Holdings table
-CREATE TABLE StockHoldings (
-    portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
-    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
-    num_shares INT NOT NULL CHECK (num_shares >= 0),
-    PRIMARY KEY (portfolio_id, symbol)
-);
-
--- Stock Predictions table
-CREATE TABLE StockPredictions (
-    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
-    future_date DATE NOT NULL,
-    predicted_close DECIMAL(15, 2) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (symbol, created_at, future_date)
-);
-
 -- Review table
-CREATE TABLE Reviews (
+CREATE TABLE IF NOT EXISTS Reviews (
     review_id SERIAL PRIMARY KEY,
     list_id INT NOT NULL REFERENCES StockLists(list_id) ON DELETE CASCADE,
     user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
@@ -110,11 +109,19 @@ CREATE TABLE Reviews (
 );
 
 -- Friend Request table
-CREATE TABLE FriendRequests (
+CREATE TABLE IF NOT EXISTS FriendRequests (
     request_id SERIAL PRIMARY KEY,
     from_user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
     to_user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
     status VARCHAR(10) CHECK (status IN ('pending', 'accepted', 'rejected')),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (from_user_id, to_user_id)  -- Prevent duplicate requests
+    UNIQUE (from_user_id, to_user_id),  -- Prevent duplicate requests
+    CHECK (from_user_id != to_user_id)  -- Prevent users from sending requests to themselves
+);
+
+-- Shared List table
+CREATE TABLE SharedLists (
+    list_id INT NOT NULL REFERENCES StockLists(list_id) ON DELETE CASCADE,
+    shared_user INT REFERENCES Users(user_id) ON DELETE CASCADE,  -- NULL = public
+    PRIMARY KEY (list_id, shared_user)
 );
