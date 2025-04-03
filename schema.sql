@@ -36,6 +36,13 @@ CREATE TABLE IF NOT EXISTS CashTransactions (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Stock table
+CREATE TABLE IF NOT EXISTS Stocks (
+    symbol VARCHAR(10) PRIMARY KEY,
+    company_name VARCHAR(100) NOT NULL
+);
+
+
 -- Stock Holdings table
 CREATE TABLE IF NOT EXISTS StockHoldings (
     portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
@@ -53,12 +60,6 @@ CREATE TABLE IF NOT EXISTS StockTransactions (
     num_shares INT NOT NULL CHECK (num_shares > 0),
     price DECIMAL(15, 2) NOT NULL,  -- Price per share at transaction time
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Stock table
-CREATE TABLE IF NOT EXISTS Stocks (
-    symbol VARCHAR(10) PRIMARY KEY,
-    company_name VARCHAR(100) NOT NULL
 );
 
 -- Stock Prices table
