@@ -1,6 +1,6 @@
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function SendRequest() {
     return (
@@ -15,5 +15,5 @@ export default function SendRequest() {
                 <Button>Send Request</Button>
             </div>
         </>
-    )
+    );
 }

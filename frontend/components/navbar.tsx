@@ -4,8 +4,8 @@ import {
     MenubarItem,
     MenubarMenu,
     MenubarTrigger,
-} from '@/components/ui/menubar'
-import Link from 'next/link'
+} from '@/components/ui/menubar';
+import Link from 'next/link';
 
 export default function Navbar() {
     return (
@@ -58,5 +58,5 @@ export default function Navbar() {
                 </MenubarContent>
             </MenubarMenu>
         </Menubar>
-    )
+    );
 }

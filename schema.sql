@@ -12,3 +12,10 @@ INSERT INTO cars (make, model, year, price) VALUES
 ('Toyota', 'Camry', 2020, 24000.00),
 ('Honda', 'Accord', 2019, 22000.00),
 ('Ford', 'Mustang', 2021, 35000.00);
+
+-- Users table
+CREATE TABLE IF NOT EXISTS Users (
+    user_id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL
+);

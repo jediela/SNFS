@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.db.car_db import add_car, update_car, get_all_cars, get_car
 
-car_bp = Blueprint("car_bp", __name__, url_prefix="/api/cars")
+car_bp = Blueprint("car_bp", __name__, url_prefix="/cars")
 
 
 @car_bp.route("", methods=["GET"])
