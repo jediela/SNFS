@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 export default function SendRequest() {
     const [senderId, setSenderId] = useState('');
-    const [recieverId, setRecieverId] = useState('');
+    const [receiverId, setReceiverId] = useState('');
 
     async function handleSend(e: React.FormEvent) {
         e.preventDefault();
@@ -19,7 +19,7 @@ export default function SendRequest() {
                 },
                 body: JSON.stringify({
                     senderId,
-                    recieverId,
+                    receiverId,
                 }),
             });
             const data = await res.json();
@@ -28,10 +28,10 @@ export default function SendRequest() {
                 return;
             }
             toast.success(data.message, {
-                description: `request_id: ${data.request.request_id}, sender_id: ${data.request.from_user_id}, reciever_id: ${data.request.to_user_id}, Status: ${data.request.status}`,
+                description: `request_id: ${data.request.request_id}, sender_id: ${data.request.from_user_id}, receiver_id: ${data.request.to_user_id}, Status: ${data.request.status}`,
             });
             setSenderId('');
-            setRecieverId('');
+            setReceiverId('');
         } catch (error) {
             toast.error(String(error));
         }
@@ -58,10 +58,10 @@ export default function SendRequest() {
                             <Label>Send Request to: User ID</Label>
                         </div>
                         <Input
-                            placeholder="Reciever User ID"
-                            value={recieverId}
+                            placeholder="Receiver User ID"
+                            value={receiverId}
                             required
-                            onChange={(e) => setRecieverId(e.target.value)}
+                            onChange={(e) => setReceiverId(e.target.value)}
                         />
                     </div>
                     <Button type="submit" className="w-full">

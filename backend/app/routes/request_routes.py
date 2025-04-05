@@ -7,12 +7,12 @@ request_bp = Blueprint("request_bp", __name__, url_prefix="/requests")
 def send_friend_request():
     data = request.json
     senderId = data.get("senderId")
-    recieverId = data.get("recieverId")
+    receiverId = data.get("receiverId")
 
-    if not senderId or not recieverId:
-        return jsonify({"error": "Sender ID and Reciever ID are required"}), 400
+    if not senderId or not receiverId:
+        return jsonify({"error": "Sender ID and Receiver ID are required"}), 400
     
-    return send_request(senderId, recieverId)
+    return send_request(senderId, receiverId)
 
 @request_bp.route("/view", methods=["GET"])
 def get_friend_requests():

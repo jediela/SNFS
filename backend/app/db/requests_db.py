@@ -20,13 +20,13 @@ def get_request_by_id(request_id):
         conn.close()
 
 
-def send_request(senderId, recieverId):
+def send_request(senderId, receiverId):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 "INSERT INTO FriendRequests (from_user_id, to_user_id, status) VALUES (%s, %s, %s) RETURNING *;",
-                (senderId, recieverId, "pending"),
+                (senderId, receiverId, "pending"),
             )
             request = cur.fetchone()
         conn.commit()
