@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export default function CreatePortfolio() {
     const [userId, setUserId] = useState('');
@@ -11,6 +12,30 @@ export default function CreatePortfolio() {
 
     async function handleCreate(e: React.FormEvent) {
         e.preventDefault();
+        try {
+            const res = await fetch('http://localhost:8000/portfolios/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId,
+                    portfolioName,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                toast.error(data.error);
+                return;
+            }
+            toast.success(data.message, {
+                description: `portfolio_id: ${data.portfolio.portfolio_id}, user_id: ${data.portfolio.user_id}, name: ${data.portfolio.name}, balance: ${data.portfolio.balance}`,
+            });
+            setUserId('');
+            setPortfolioName('');
+        } catch (error) {
+            toast.error(String(error));
+        }
     }
 
     return (
