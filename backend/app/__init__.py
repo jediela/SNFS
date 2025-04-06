@@ -10,10 +10,12 @@ def create_app():
     from app.routes.car_routes import car_bp
     from app.routes.user_routes import user_bp
     from app.routes.request_routes import request_bp
+    from app.routes.portfolio_routes import portfolio_bp
 
     # Register blueprints
     app.register_blueprint(car_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(request_bp)
-    
+    app.register_blueprint(portfolio_bp)
+
     return app

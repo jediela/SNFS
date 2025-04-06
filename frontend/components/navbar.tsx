@@ -24,8 +24,16 @@ export default function Navbar() {
                     <MenubarItem asChild>
                         <Link href="/users/login">Login</Link>
                     </MenubarItem>
+                </MenubarContent>
+            </MenubarMenu>
+            <MenubarMenu>
+                <MenubarTrigger>Portfolios</MenubarTrigger>
+                <MenubarContent>
                     <MenubarItem asChild>
-                        <Link href="/users/portfolio">View Portfolio</Link>
+                        <Link href="/portfolios/create">Create Portfolio</Link>
+                    </MenubarItem>
+                    <MenubarItem asChild>
+                        <Link href="/portfolios/view">View Portfolios</Link>
                     </MenubarItem>
                 </MenubarContent>
             </MenubarMenu>
@@ -33,10 +41,10 @@ export default function Navbar() {
                 <MenubarTrigger>Requests</MenubarTrigger>
                 <MenubarContent>
                     <MenubarItem asChild>
-                        <Link href="/requests/view">View Requests</Link>
+                        <Link href="/requests/send">Send Request</Link>
                     </MenubarItem>
                     <MenubarItem asChild>
-                        <Link href="/requests/send">Send Request</Link>
+                        <Link href="/requests/view">View Requests</Link>
                     </MenubarItem>
                 </MenubarContent>
             </MenubarMenu>

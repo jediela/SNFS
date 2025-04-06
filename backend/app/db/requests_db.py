@@ -3,15 +3,19 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from .base import get_connection
 
+
 def get_request_by_id(request_id):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT * FROM FriendRequests
                 WHERE request_id = %s
                 AND status = 'pending'
-            """, (request_id,))
+            """,
+                (request_id,),
+            )
         request = cur.fetchone()
         return request
     except psycopg2.Error as e:
@@ -44,12 +48,15 @@ def accept_request(request_id):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE FriendRequests 
                 SET status = 'accepted' 
                 WHERE request_id = %s 
                 RETURNING *
-            """, (request_id,))
+            """,
+                (request_id,),
+            )
             updated_request = cur.fetchone()
         conn.commit()
         return jsonify({"message": "Request accepted", "request": updated_request}), 200
@@ -63,12 +70,15 @@ def reject_request(request_id):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE FriendRequests 
                 SET status = 'rejected' 
                 WHERE request_id = %s 
                 RETURNING *
-            """, (request_id,))
+            """,
+                (request_id,),
+            )
             updated_request = cur.fetchone()
         conn.commit()
         return jsonify({"message": "Request rejected", "request": updated_request}), 200
@@ -82,7 +92,8 @@ def get_received_requests(user_id):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT 
                     fr.request_id,
                     fr.status,
@@ -94,9 +105,11 @@ def get_received_requests(user_id):
                 WHERE fr.to_user_id = %s
                 AND fr.status = 'pending'
                 ORDER BY fr.timestamp DESC;
-            """, (user_id,))
+            """,
+                (user_id,),
+            )
             requests = cur.fetchall()
-            
+
             # Format datetime and simplify response
             formatted_requests = [
                 {
@@ -104,19 +117,19 @@ def get_received_requests(user_id):
                     "timestamp": req["timestamp"].isoformat(),
                     "sender": {
                         "id": req["sender_id"],
-                        "username": req["sender_username"]
-                    }
+                        "username": req["sender_username"],
+                    },
                 }
                 for req in requests
             ]
-            
+
             # Remove temporary fields
             for req in formatted_requests:
                 del req["sender_id"]
                 del req["sender_username"]
-            
+
             return jsonify({"received_requests": formatted_requests}), 200
-            
+
     except psycopg2.Error as e:
         return jsonify({"error": str(e)}), 500
     finally:
