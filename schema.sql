@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS Users (
 CREATE TABLE IF NOT EXISTS Portfolios (
     portfolio_id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
-    balance DECIMAL(15, 2) DEFAULT 0.0
+    balance DECIMAL(15, 2) DEFAULT 0.0,
+    name VARCHAR(50) NOT NULL
 );
 
 -- Cash Transaction table
