@@ -4,6 +4,7 @@ from app.db.stock_lists_db import (
     add_item_to_stock_list,
     get_accessible_stock_lists,
     verify_user_owns_list,
+    delete_stock_list,
 )
 
 stock_list_bp = Blueprint("stock_list_bp", __name__, url_prefix="/stocklists")
@@ -64,3 +65,14 @@ def get_lists():
 def get_lists_for_user(user_id):
     search = request.args.get("search")
     return get_accessible_stock_lists(user_id, search)
+
+
+@stock_list_bp.route("/<int:list_id>", methods=["DELETE"])
+def delete_list(list_id):
+    data = request.json
+    user_id = data.get("user_id")
+    
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+        
+    return delete_stock_list(list_id, user_id)

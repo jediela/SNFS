@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -28,6 +29,8 @@ export default function ViewStockLists() {
     const [searchTerm, setSearchTerm] = useState('');
     const [stockLists, setStockLists] = useState<StockList[]>([]);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
     
     // Check for logged in user on component mount
     useEffect(() => {
@@ -87,6 +90,38 @@ export default function ViewStockLists() {
         fetchStockLists(isLoggedIn ? parseInt(userId) : null);
     }
     
+    async function handleDeleteList(listId: number) {
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`http://localhost:8000/stocklists/${listId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: parseInt(userId),
+                }),
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                toast.error(data.error);
+                return;
+            }
+            
+            toast.success(data.message);
+            
+            // Remove the deleted list from the state
+            setStockLists((prev) => prev.filter(list => list.list_id !== listId));
+            setDeleteConfirmId(null);
+        } catch (error) {
+            toast.error(String(error));
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+    
     function handleLogout() {
         localStorage.removeItem('user');
         setIsLoggedIn(false);
@@ -139,9 +174,47 @@ export default function ViewStockLists() {
                                 <div className="flex justify-between">
                                     <div>
                                         <CardTitle>{list.name}</CardTitle>
-                                        <p className="text-muted-foreground text-sm">
-                                            Created by: {list.creator_name} | Visibility: {list.visibility}
-                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-muted-foreground text-sm">
+                                                Created by: {list.creator_name} | Visibility: {list.visibility}
+                                            </p>
+                                            
+                                            {/* Delete button - only show for owned lists */}
+                                            {isLoggedIn && list.access_type === 'owned' && (
+                                                <>
+                                                    {deleteConfirmId === list.list_id ? (
+                                                        <div className="flex items-center gap-2 ml-2 bg-red-50 dark:bg-red-950/30 px-2 py-1 rounded-md">
+                                                            <AlertCircle className="h-4 w-4 text-red-500" />
+                                                            <span className="text-xs text-red-600 dark:text-red-400">Confirm delete?</span>
+                                                            <Button 
+                                                                variant="destructive" 
+                                                                size="sm"
+                                                                disabled={isDeleting}
+                                                                onClick={() => handleDeleteList(list.list_id)}
+                                                            >
+                                                                Yes, Delete
+                                                            </Button>
+                                                            <Button 
+                                                                variant="outline" 
+                                                                size="sm"
+                                                                onClick={() => setDeleteConfirmId(null)}
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                                            onClick={() => setDeleteConfirmId(list.list_id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mr-1" /> Delete
+                                                        </Button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="bg-muted px-3 py-1 rounded-full text-sm">
                                         {list.access_type === 'owned' ? 'Private' : 

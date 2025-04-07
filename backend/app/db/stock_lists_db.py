@@ -137,3 +137,28 @@ def verify_user_owns_list(user_id, list_id):
         return False
     finally:
         conn.close()
+
+def delete_stock_list(list_id, user_id):
+    """Delete a stock list if it belongs to the user"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # First check if the list belongs to the user
+            cur.execute(
+                "SELECT EXISTS(SELECT 1 FROM StockLists WHERE list_id = %s AND user_id = %s)",
+                (list_id, user_id)
+            )
+            exists = cur.fetchone()[0]
+            
+            if not exists:
+                return jsonify({"error": "You don't have permission to delete this list or it doesn't exist"}), 403
+                
+            # Delete the list (cascade delete will handle related items due to DB constraints)
+            cur.execute("DELETE FROM StockLists WHERE list_id = %s AND user_id = %s", (list_id, user_id))
+            conn.commit()
+            
+            return jsonify({"message": f"Stock list {list_id} deleted successfully"}), 200
+    except psycopg2.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
