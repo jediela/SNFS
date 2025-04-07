@@ -14,7 +14,10 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Navbar() {
-    const [user, setUser] = useState<{ user_id: number; username: string } | null>(null);
+    const [user, setUser] = useState<{
+        user_id: number;
+        username: string;
+    } | null>(null);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -31,6 +34,19 @@ export default function Navbar() {
         } else {
             setUser(null);
         }
+        const handleUserLogin = () => {
+            const updatedUser = localStorage.getItem('user');
+            if (updatedUser) {
+                setUser(JSON.parse(updatedUser));
+            } else {
+                setUser(null);
+            }
+        };
+        window.addEventListener('user-login', handleUserLogin);
+
+        return () => {
+            window.removeEventListener('user-login', handleUserLogin);
+        };
     }, [pathname]);
 
     function handleLogout() {
@@ -62,7 +78,9 @@ export default function Navbar() {
                             </>
                         ) : (
                             <MenubarItem asChild>
-                                <Link href="/users/portfolio">View Portfolio</Link>
+                                <Link href="/users/portfolio">
+                                    View Portfolio
+                                </Link>
                             </MenubarItem>
                         )}
                     </MenubarContent>
@@ -98,17 +116,15 @@ export default function Navbar() {
                     </MenubarContent>
                 </MenubarMenu>
             </div>
-            
+
             {user && (
                 <div className="flex items-center gap-2">
                     <div className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                        Logged in as {user.username} | id:{user.user_id}
+                        Logged in as:{' '}
+                        <span className="font-bold">{user.username}</span> | id:{' '}
+                        <span className="font-bold">{user.user_id}</span>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleLogout}
-                    >
+                    <Button size="sm" onClick={handleLogout}>
                         Logout
                     </Button>
                 </div>

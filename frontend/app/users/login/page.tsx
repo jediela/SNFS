@@ -36,12 +36,15 @@ export default function Login() {
                 return;
             }
 
-            // Store user data in localStorage for session management
+            // Store user data in local storage
             localStorage.setItem('user', JSON.stringify(data.user));
 
             setUsername('');
             setPassword('');
-
+            toast.success(data.message, {
+                description: `user_id: ${data.user.user_id}, Username: ${data.user.username}, Password: ${data.user.password}`,
+            });
+            window.dispatchEvent(new Event('user-login'));
         } catch (error) {
             toast.error(String(error));
         }
