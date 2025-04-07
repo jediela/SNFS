@@ -42,43 +42,48 @@ export default function ViewStockLists() {
     const router = useRouter();
 
     // Define fetchStockLists with useCallback
-    const fetchStockLists = useCallback(async (uid: number | null = null) => {
-        try {
-            // Build the URL with query parameters
-            let url = 'http://localhost:8000/stocklists/lists';
-            const params = new URLSearchParams();
+    const fetchStockLists = useCallback(
+        async (uid: number | null = null) => {
+            try {
+                // Build the URL with query parameters
+                let url = 'http://localhost:8000/stocklists/lists';
+                const params = new URLSearchParams();
 
-            if (uid) {
-                params.append('user_id', uid.toString());
+                if (uid) {
+                    params.append('user_id', uid.toString());
+                }
+
+                if (searchTerm) {
+                    params.append('search', searchTerm);
+                }
+
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    toast.error(data.error);
+                    return;
+                }
+
+                setStockLists(data.stockLists);
+
+                if (data.stockLists.length === 0) {
+                    toast.info('No stock lists found');
+                } else {
+                    toast.success(
+                        `Found ${data.stockLists.length} stock lists`
+                    );
+                }
+            } catch (error) {
+                toast.error(String(error));
             }
-
-            if (searchTerm) {
-                params.append('search', searchTerm);
-            }
-
-            if (params.toString()) {
-                url += '?' + params.toString();
-            }
-
-            const res = await fetch(url);
-            const data = await res.json();
-
-            if (!res.ok) {
-                toast.error(data.error);
-                return;
-            }
-
-            setStockLists(data.stockLists);
-
-            if (data.stockLists.length === 0) {
-                toast.info('No stock lists found');
-            } else {
-                toast.success(`Found ${data.stockLists.length} stock lists`);
-            }
-        } catch (error) {
-            toast.error(String(error));
-        }
-    }, [searchTerm]);
+        },
+        [searchTerm]
+    );
 
     // Check for logged in user on component mount
     useEffect(() => {
@@ -140,7 +145,7 @@ export default function ViewStockLists() {
     function handleWriteReview(listId: number) {
         router.push(`/reviews/write?list_id=${listId}`);
     }
-    
+
     function handleViewReviews(listId: number) {
         router.push(`/reviews/view?list_id=${listId}`);
     }
@@ -251,14 +256,20 @@ export default function ViewStockLists() {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => handleViewReviews(list.list_id)}
+                                            onClick={() =>
+                                                handleViewReviews(list.list_id)
+                                            }
                                         >
                                             View Reviews
                                         </Button>
                                         {isLoggedIn && (
                                             <Button
                                                 size="sm"
-                                                onClick={() => handleWriteReview(list.list_id)}
+                                                onClick={() =>
+                                                    handleWriteReview(
+                                                        list.list_id
+                                                    )
+                                                }
                                             >
                                                 Write Review
                                             </Button>
