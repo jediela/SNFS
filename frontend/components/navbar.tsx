@@ -30,6 +30,17 @@ export default function Navbar() {
                 </MenubarContent>
             </MenubarMenu>
             <MenubarMenu>
+                <MenubarTrigger>Stock Lists</MenubarTrigger>
+                <MenubarContent>
+                    <MenubarItem asChild>
+                        <Link href="/stocklists/create">Create List</Link>
+                    </MenubarItem>
+                    <MenubarItem asChild>
+                        <Link href="/stocklists/view">View Lists</Link>
+                    </MenubarItem>
+                </MenubarContent>
+            </MenubarMenu>
+            <MenubarMenu>
                 <MenubarTrigger>Requests</MenubarTrigger>
                 <MenubarContent>
                     <MenubarItem asChild>

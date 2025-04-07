@@ -10,12 +10,14 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
 export default function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const router = useRouter();
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault();
@@ -36,11 +38,15 @@ export default function Login() {
                 return;
             }
 
+            // Store user data in localStorage for session management
+            localStorage.setItem('user', JSON.stringify(data.user));
+
             setUsername('');
             setPassword('');
-            toast.success(data.message, {
-                description: `user_id: ${data.user.user_id}, Username: ${data.user.username}, Password: ${data.user.password}`,
-            });
+            toast.success(data.message);
+            
+            // Redirect to stock lists page after login
+            router.push('/stocklists/view');
         } catch (error) {
             toast.error(String(error));
         }
@@ -51,7 +57,7 @@ export default function Login() {
             <CardHeader>
                 <CardTitle className="text-2xl">Login</CardTitle>
                 <CardDescription>
-                    Enter your email below to login to your account
+                    Enter your username and password to login to your account
                 </CardDescription>
             </CardHeader>
             <CardContent>
