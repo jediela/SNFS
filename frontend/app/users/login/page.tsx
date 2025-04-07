@@ -44,7 +44,7 @@ export default function Login() {
             setUsername('');
             setPassword('');
             toast.success(data.message);
-            
+
             // Redirect to stock lists page after login
             router.push('/stocklists/view');
         } catch (error) {

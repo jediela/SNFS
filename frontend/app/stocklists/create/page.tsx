@@ -21,7 +21,10 @@ export default function CreateStockList() {
     const [listId, setListId] = useState<number | null>(null);
     const [symbol, setSymbol] = useState('');
     const [shares, setShares] = useState('');
-    const [user, setUser] = useState<{user_id: number, username: string} | null>(null);
+    const [user, setUser] = useState<{
+        user_id: number;
+        username: string;
+    } | null>(null);
 
     // Check for logged in user on component mount
     useEffect(() => {
@@ -36,13 +39,13 @@ export default function CreateStockList() {
 
     async function handleCreateList(e: React.FormEvent) {
         e.preventDefault();
-        
+
         if (!user) {
             toast.error('Please log in to create stock lists');
             router.push('/users/login');
             return;
         }
-        
+
         try {
             const res = await fetch('http://localhost:8000/stocklists/create', {
                 method: 'POST',
@@ -78,18 +81,21 @@ export default function CreateStockList() {
         }
 
         try {
-            const res = await fetch('http://localhost:8000/stocklists/add_item', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_id: user.user_id,  // Add user_id to verify ownership
-                    list_id: listId,
-                    symbol,
-                    num_shares: parseInt(shares),
-                }),
-            });
+            const res = await fetch(
+                'http://localhost:8000/stocklists/add_item',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: user.user_id, // Add user_id to verify ownership
+                        list_id: listId,
+                        symbol,
+                        num_shares: parseInt(shares),
+                    }),
+                }
+            );
             const data = await res.json();
             if (!res.ok) {
                 toast.error(data.error);
@@ -111,10 +117,14 @@ export default function CreateStockList() {
             <Card>
                 <CardHeader>
                     <CardTitle>Authentication Required</CardTitle>
-                    <CardDescription>Please log in to create stock lists</CardDescription>
+                    <CardDescription>
+                        Please log in to create stock lists
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button onClick={() => router.push('/users/login')}>Go to Login</Button>
+                    <Button onClick={() => router.push('/users/login')}>
+                        Go to Login
+                    </Button>
                 </CardContent>
             </Card>
         );
@@ -126,7 +136,9 @@ export default function CreateStockList() {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle className="text-2xl">Create Stock List</CardTitle>
+                            <CardTitle className="text-2xl">
+                                Create Stock List
+                            </CardTitle>
                             <CardDescription>
                                 Create a new stock list and add stocks to it
                             </CardDescription>
@@ -153,7 +165,9 @@ export default function CreateStockList() {
                                 <select
                                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none"
                                     value={visibility}
-                                    onChange={(e) => setVisibility(e.target.value)}
+                                    onChange={(e) =>
+                                        setVisibility(e.target.value)
+                                    }
                                 >
                                     <option value="private">Private</option>
                                     <option value="shared">Shared</option>
@@ -184,7 +198,11 @@ export default function CreateStockList() {
                                     <Input
                                         value={symbol}
                                         required
-                                        onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                                        onChange={(e) =>
+                                            setSymbol(
+                                                e.target.value.toUpperCase()
+                                            )
+                                        }
                                         placeholder="e.g., AAPL"
                                     />
                                 </div>
@@ -194,7 +212,9 @@ export default function CreateStockList() {
                                         value={shares}
                                         type="number"
                                         required
-                                        onChange={(e) => setShares(e.target.value)}
+                                        onChange={(e) =>
+                                            setShares(e.target.value)
+                                        }
                                         placeholder="e.g., 10"
                                     />
                                 </div>
