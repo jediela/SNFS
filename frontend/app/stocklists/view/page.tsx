@@ -12,8 +12,9 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { AlertCircle, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface StockListItem {
     symbol: string;
@@ -38,23 +39,10 @@ export default function ViewStockLists() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+    const router = useRouter();
 
-    // Check for logged in user on component mount
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            const user = JSON.parse(storedUser);
-            setUserId(user.user_id.toString());
-            setIsLoggedIn(true);
-            // Auto load stock lists for logged in users
-            fetchStockLists(user.user_id);
-        } else {
-            // Load only public lists if no user is logged in
-            fetchStockLists();
-        }
-    }, []);
-
-    async function fetchStockLists(uid: number | null = null) {
+    // Define fetchStockLists with useCallback
+    const fetchStockLists = useCallback(async (uid: number | null = null) => {
         try {
             // Build the URL with query parameters
             let url = 'http://localhost:8000/stocklists/lists';
@@ -90,7 +78,22 @@ export default function ViewStockLists() {
         } catch (error) {
             toast.error(String(error));
         }
-    }
+    }, [searchTerm]);
+
+    // Check for logged in user on component mount
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            const user = JSON.parse(storedUser);
+            setUserId(user.user_id.toString());
+            setIsLoggedIn(true);
+            // Auto load stock lists for logged in users
+            fetchStockLists(user.user_id);
+        } else {
+            // Load only public lists if no user is logged in
+            fetchStockLists();
+        }
+    }, [fetchStockLists]);
 
     function handleSearch(e: React.FormEvent) {
         e.preventDefault();
@@ -134,12 +137,12 @@ export default function ViewStockLists() {
         }
     }
 
-    function handleLogout() {
-        localStorage.removeItem('user');
-        setIsLoggedIn(false);
-        setUserId('');
-        fetchStockLists(); // Reload only public lists
-        toast.info('Logged out');
+    function handleWriteReview(listId: number) {
+        router.push(`/reviews/write?list_id=${listId}`);
+    }
+    
+    function handleViewReviews(listId: number) {
+        router.push(`/reviews/view?list_id=${listId}`);
     }
 
     return (
@@ -150,19 +153,6 @@ export default function ViewStockLists() {
                         <CardTitle className="text-2xl">
                             View Stock Lists
                         </CardTitle>
-                        {isLoggedIn && (
-                            <div className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                                Logged in as user #{userId}
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="ml-2"
-                                    onClick={handleLogout}
-                                >
-                                    Logout
-                                </Button>
-                            </div>
-                        )}
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -250,12 +240,29 @@ export default function ViewStockLists() {
                                                 )}
                                         </div>
                                     </div>
-                                    <div className="bg-muted px-3 py-1 rounded-full text-sm">
-                                        {list.access_type === 'owned'
-                                            ? 'Private'
-                                            : list.access_type === 'shared'
-                                              ? 'Shared with you'
-                                              : 'Public'}
+                                    <div className="flex items-center gap-2">
+                                        <div className="bg-muted px-3 py-1 rounded-full text-sm">
+                                            {list.access_type === 'owned'
+                                                ? 'Private'
+                                                : list.access_type === 'shared'
+                                                  ? 'Shared with you'
+                                                  : 'Public'}
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleViewReviews(list.list_id)}
+                                        >
+                                            View Reviews
+                                        </Button>
+                                        {isLoggedIn && (
+                                            <Button
+                                                size="sm"
+                                                onClick={() => handleWriteReview(list.list_id)}
+                                            >
+                                                Write Review
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             </CardHeader>
