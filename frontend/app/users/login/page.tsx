@@ -17,7 +17,6 @@ import { toast } from 'sonner';
 export default function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const router = useRouter();
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault();
@@ -43,10 +42,7 @@ export default function Login() {
 
             setUsername('');
             setPassword('');
-            toast.success(data.message);
 
-            // Redirect to stock lists page after login
-            router.push('/stocklists/view');
         } catch (error) {
             toast.error(String(error));
         }
