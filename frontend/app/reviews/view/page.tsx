@@ -3,10 +3,11 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { toast } from 'sonner';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Pencil, Check, X } from 'lucide-react';
 
 interface Review {
     review_id: number;
@@ -36,6 +37,9 @@ function ReviewsContent() {
     const [viewMode, setViewMode] = useState<'list' | 'user'>('list');
     const [isDeletingReview, setIsDeletingReview] = useState(false);
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+    const [editReviewId, setEditReviewId] = useState<number | null>(null);
+    const [editedContent, setEditedContent] = useState('');
+    const [isEditingReview, setIsEditingReview] = useState(false);
     
     // Add refs to track fetched lists and prevent repeated API calls
     const fetchedListsRef = useRef<Set<string>>(new Set());
@@ -229,6 +233,63 @@ function ReviewsContent() {
         }
     }
 
+    // Add function to handle starting edit mode
+    function handleStartEdit(review: Review) {
+        setEditReviewId(review.review_id);
+        setEditedContent(review.content);
+    }
+
+    // Add function to handle canceling edit
+    function handleCancelEdit() {
+        setEditReviewId(null);
+        setEditedContent('');
+    }
+
+    // Add function to handle submitting edited review
+    async function handleSubmitEdit(reviewId: number) {
+        if (!user || !editedContent.trim()) return;
+        
+        setIsEditingReview(true);
+        try {
+            const res = await fetch(`http://localhost:8000/reviews/update/${reviewId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: user.user_id,
+                    content: editedContent
+                }),
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                toast.error(data.error || 'Failed to update review');
+                return;
+            }
+            
+            toast.success('Review updated successfully');
+            
+            // Update the review in the local state
+            setReviews(prevReviews => 
+                prevReviews.map(review => 
+                    review.review_id === reviewId 
+                        ? { ...review, content: editedContent }
+                        : review
+                )
+            );
+            
+            setEditReviewId(null);
+            setEditedContent('');
+            
+        } catch (error) {
+            toast.error(String(error));
+        } finally {
+            setIsEditingReview(false);
+        }
+    }
+
     return (
         <div className="space-y-6">
             <Card>
@@ -317,7 +378,7 @@ function ReviewsContent() {
                                             </div>
                                         )}
                                         
-                                        {/* Add Delete button for user's own reviews */}
+                                        {/* Show edit/delete buttons only for user's own reviews */}
                                         {user && user.user_id === review.user_id && (
                                             <>
                                                 {deleteConfirmId === review.review_id ? (
@@ -341,24 +402,74 @@ function ReviewsContent() {
                                                             Cancel
                                                         </Button>
                                                     </div>
+                                                ) : editReviewId === review.review_id ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-green-600 hover:text-green-800 hover:bg-green-50 dark:hover:bg-green-950/30"
+                                                            onClick={() => handleSubmitEdit(review.review_id)}
+                                                            disabled={isEditingReview}
+                                                        >
+                                                            <Check className="h-4 w-4 mr-1" />
+                                                            Save
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-gray-500 hover:text-gray-700"
+                                                            onClick={handleCancelEdit}
+                                                        >
+                                                            <X className="h-4 w-4 mr-1" />
+                                                            Cancel
+                                                        </Button>
+                                                    </div>
                                                 ) : (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
-                                                        onClick={() => setDeleteConfirmId(review.review_id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-1" />
-                                                        Delete
-                                                    </Button>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                                                            onClick={() => handleStartEdit(review)}
+                                                        >
+                                                            <Pencil className="h-4 w-4 mr-1" />
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                                            onClick={() => setDeleteConfirmId(review.review_id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mr-1" />
+                                                            Delete
+                                                        </Button>
+                                                    </div>
                                                 )}
                                             </>
                                         )}
                                     </div>
                                 </div>
-                                <div className="mt-2 whitespace-pre-wrap bg-muted/50 p-4 rounded-md">
-                                    {review.content}
-                                </div>
+                                
+                                {editReviewId === review.review_id ? (
+                                    <div className="mt-2">
+                                        <Textarea
+                                            value={editedContent}
+                                            onChange={(e) => setEditedContent(e.target.value)}
+                                            placeholder="Edit your review..."
+                                            className="w-full min-h-[120px]"
+                                            maxLength={4000}
+                                            disabled={isEditingReview}
+                                        />
+                                        <p className="text-xs text-muted-foreground text-right mt-1">
+                                            {editedContent.length}/4000 characters
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="mt-2 whitespace-pre-wrap bg-muted/50 p-4 rounded-md">
+                                        {review.content}
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     ))}
