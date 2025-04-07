@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, Suspense, useRef } from 'react';
 import { toast } from 'sonner';
+import { Trash2 } from 'lucide-react';
 
 interface Review {
     review_id: number;
@@ -33,12 +34,16 @@ function ReviewsContent() {
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState<{user_id: number, username: string} | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'user'>('list');
+    const [isDeletingReview, setIsDeletingReview] = useState(false);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
     
     // Add refs to track fetched lists and prevent repeated API calls
     const fetchedListsRef = useRef<Set<string>>(new Set());
     const initialLoadDoneRef = useRef(false);
+    const isLoadingRef = useRef(false);
+    const initialRenderRef = useRef(true);
 
-    // Define fetchReviewsForList with useCallback to prevent unnecessary re-renders
+    // Define fetchReviewsForList without 'loading' dependency
     const fetchReviewsForList = useCallback(async (id = listId) => {
         if (!id) {
             toast.error('Please enter a stock list ID');
@@ -47,11 +52,11 @@ function ReviewsContent() {
         
         // Skip if we're already loading or have fetched this list before in this session
         const cacheKey = `list-${id}-${user?.user_id || 'guest'}`;
-        if (loading || fetchedListsRef.current.has(cacheKey)) {
+        if (isLoadingRef.current || fetchedListsRef.current.has(cacheKey)) {
             return;
         }
         
-        fetchedListsRef.current.add(cacheKey);
+        isLoadingRef.current = true;
         setLoading(true);
         
         try {
@@ -72,6 +77,7 @@ function ReviewsContent() {
             setReviews(reviewsArray);
             setStockList(data.stockList);
             setViewMode('list');
+            fetchedListsRef.current.add(cacheKey);
             
             // Only show info toast on manual searches, not initial load
             if (initialLoadDoneRef.current && reviewsArray.length === 0) {
@@ -83,20 +89,21 @@ function ReviewsContent() {
             setStockList(null);
         } finally {
             setLoading(false);
+            isLoadingRef.current = false;
             initialLoadDoneRef.current = true;
         }
-    }, [listId, user, loading]);
+    }, [listId, user]); // Remove 'loading' dependency
     
-    // Define fetchUserReviews with useCallback - similar safeguards needed here
+    // Define fetchUserReviews without 'loading' dependency
     const fetchUserReviews = useCallback(async (userId: number) => {
         if (!userId) return;
         
         const cacheKey = `user-${userId}`;
-        if (loading || fetchedListsRef.current.has(cacheKey)) {
+        if (isLoadingRef.current || fetchedListsRef.current.has(cacheKey)) {
             return;
         }
         
-        fetchedListsRef.current.add(cacheKey);
+        isLoadingRef.current = true;
         setLoading(true);
         
         try {
@@ -114,6 +121,7 @@ function ReviewsContent() {
             setReviews(reviewsArray);
             setStockList(null);
             setViewMode('user');
+            fetchedListsRef.current.add(cacheKey);
             
             // Only show info toast on manual actions, not initial load
             if (initialLoadDoneRef.current && reviewsArray.length === 0) {
@@ -124,13 +132,14 @@ function ReviewsContent() {
             setReviews([]);
         } finally {
             setLoading(false);
+            isLoadingRef.current = false;
             initialLoadDoneRef.current = true;
         }
-    }, [loading]);
+    }, [user]); // Remove 'loading' dependency
 
+    // Use a separate effect for the initial data load
     useEffect(() => {
-        // Reset the fetch tracking when searchParams changes
-        fetchedListsRef.current.clear();
+        if (!initialRenderRef.current) return;
         
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -142,14 +151,22 @@ function ReviewsContent() {
         if (listIdParam) {
             setListId(listIdParam);
             setViewMode('list');
-            // Auto-fetch reviews if we have a list ID
-            fetchReviewsForList(listIdParam);
-        } else if (storedUser) {
-            // If no list ID but user is logged in, show user's reviews
-            setViewMode('user');
-            fetchUserReviews(JSON.parse(storedUser).user_id);
+            // Will fetch reviews in the separate effect when user/listId are set
         }
-    }, [searchParams, fetchReviewsForList, fetchUserReviews]); // Add both functions to dependencies
+        
+        initialRenderRef.current = false;
+    }, [searchParams]); // Don't depend on the fetch functions
+    
+    // Use a separate effect to fetch data when dependencies change
+    useEffect(() => {
+        if (initialRenderRef.current) return;
+        
+        if (viewMode === 'list' && listId) {
+            fetchReviewsForList();
+        } else if (viewMode === 'user' && user) {
+            fetchUserReviews(user.user_id);
+        }
+    }, [listId, user, viewMode]); // Only trigger on state changes, not on function changes
 
     function handleSearch(e: React.FormEvent) {
         e.preventDefault();
@@ -174,6 +191,41 @@ function ReviewsContent() {
             router.push(`/reviews/write?list_id=${listId}`);
         } else {
             router.push('/reviews/write');
+        }
+    }
+
+    // Add function to handle review deletion
+    async function handleDeleteReview(reviewId: number) {
+        if (!user) return;
+        
+        setIsDeletingReview(true);
+        try {
+            const res = await fetch(`http://localhost:8000/reviews/${reviewId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: user.user_id,
+                }),
+            });
+            
+            const data = await res.json();
+            
+            if (!res.ok) {
+                toast.error(data.error || 'Failed to delete review');
+                return;
+            }
+            
+            toast.success('Review deleted successfully');
+            
+            // Remove the deleted review from the local state
+            setReviews(prevReviews => prevReviews.filter(review => review.review_id !== reviewId));
+            setDeleteConfirmId(null);
+        } catch (error) {
+            toast.error(String(error));
+        } finally {
+            setIsDeletingReview(false);
         }
     }
 
@@ -258,11 +310,51 @@ function ReviewsContent() {
                                         </p>
                                     </div>
                                     
-                                    {viewMode === 'user' && (
-                                        <div className="bg-muted text-xs px-2 py-1 rounded">
-                                            List: {review.list_name}
-                                        </div>
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                        {viewMode === 'user' && (
+                                            <div className="bg-muted text-xs px-2 py-1 rounded">
+                                                List: {review.list_name}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Add Delete button for user's own reviews */}
+                                        {user && user.user_id === review.user_id && (
+                                            <>
+                                                {deleteConfirmId === review.review_id ? (
+                                                    <div className="flex items-center gap-2 ml-2 bg-red-50 dark:bg-red-950/30 px-2 py-1 rounded-md">
+                                                        <span className="text-xs text-red-600 dark:text-red-400">
+                                                            Delete this review?
+                                                        </span>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            disabled={isDeletingReview}
+                                                            onClick={() => handleDeleteReview(review.review_id)}
+                                                        >
+                                                            {isDeletingReview ? 'Deleting...' : 'Yes, Delete'}
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setDeleteConfirmId(null)}
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                                        onClick={() => setDeleteConfirmId(review.review_id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-1" />
+                                                        Delete
+                                                    </Button>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="mt-2 whitespace-pre-wrap bg-muted/50 p-4 rounded-md">
                                     {review.content}

@@ -115,6 +115,40 @@ def update_review(review_id, user_id, content):
     finally:
         conn.close()
 
+def delete_review(review_id, user_id):
+    """Delete a review if it belongs to the user"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as check_cur:
+            # Check if review exists and belongs to the user
+            check_cur.execute(
+                "SELECT EXISTS(SELECT 1 FROM Reviews WHERE review_id = %s AND user_id = %s)",
+                (review_id, user_id)
+            )
+            owns_review = check_cur.fetchone()[0]
+            
+        if not owns_review:
+            return jsonify({"error": "Review not found or you don't have permission to delete it"}), 403
+                
+        with conn.cursor() as cur:
+            # Delete the review
+            cur.execute(
+                "DELETE FROM Reviews WHERE review_id = %s AND user_id = %s",
+                (review_id, user_id)
+            )
+            rows_affected = cur.rowcount
+            
+        conn.commit()
+        
+        if rows_affected > 0:
+            return jsonify({"message": f"Review {review_id} deleted successfully"}), 200
+        else:
+            return jsonify({"error": "Failed to delete review"}), 500
+    except psycopg2.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
 def get_reviews_for_list(list_id, user_id=None):
     """Get all reviews for a stock list"""
     conn = get_connection()
