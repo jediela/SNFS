@@ -36,11 +36,15 @@ export default function Login() {
                 return;
             }
 
+            // Store user data in local storage
+            localStorage.setItem('user', JSON.stringify(data.user));
+
             setUsername('');
             setPassword('');
             toast.success(data.message, {
                 description: `user_id: ${data.user.user_id}, Username: ${data.user.username}, Password: ${data.user.password}`,
             });
+            window.dispatchEvent(new Event('user-login'));
         } catch (error) {
             toast.error(String(error));
         }
@@ -51,7 +55,7 @@ export default function Login() {
             <CardHeader>
                 <CardTitle className="text-2xl">Login</CardTitle>
                 <CardDescription>
-                    Enter your email below to login to your account
+                    Enter your username and password to login to your account
                 </CardDescription>
             </CardHeader>
             <CardContent>
