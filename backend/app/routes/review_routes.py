@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.db.reviews_db import add_review, get_reviews_for_list, get_user_reviews, update_review
+from app.db.reviews_db import add_review, get_reviews_for_list, get_user_reviews, update_review, delete_review
 
 review_bp = Blueprint("review_bp", __name__, url_prefix="/reviews")
 
@@ -51,3 +51,14 @@ def get_reviews(list_id):
 def get_user_review_list(user_id):
     """Get all reviews created by a specific user"""
     return get_user_reviews(user_id)
+
+@review_bp.route("/<int:review_id>", methods=["DELETE"])
+def remove_review(review_id):
+    """Delete a review if it belongs to the user"""
+    data = request.json
+    user_id = data.get("user_id")
+    
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+        
+    return delete_review(review_id, user_id)
