@@ -40,14 +40,11 @@ function ReviewsContent() {
     const [editReviewId, setEditReviewId] = useState<number | null>(null);
     const [editedContent, setEditedContent] = useState('');
     const [isEditingReview, setIsEditingReview] = useState(false);
-    
-    // Add refs to track fetched lists and prevent repeated API calls
     const fetchedListsRef = useRef<Set<string>>(new Set());
     const initialLoadDoneRef = useRef(false);
     const isLoadingRef = useRef(false);
     const initialRenderRef = useRef(true);
 
-    // Define fetchReviewsForList without 'loading' dependency
     const fetchReviewsForList = useCallback(async (id = listId) => {
         if (!id) {
             toast.error('Please enter a stock list ID');
@@ -96,9 +93,8 @@ function ReviewsContent() {
             isLoadingRef.current = false;
             initialLoadDoneRef.current = true;
         }
-    }, [listId, user]); // Remove 'loading' dependency
+    }, [listId, user]);
     
-    // Define fetchUserReviews without 'loading' dependency
     const fetchUserReviews = useCallback(async (userId: number) => {
         if (!userId) return;
         
@@ -139,7 +135,7 @@ function ReviewsContent() {
             isLoadingRef.current = false;
             initialLoadDoneRef.current = true;
         }
-    }, [user]); // Remove 'loading' dependency
+    }, []);
 
     // Use a separate effect for the initial data load
     useEffect(() => {
@@ -155,13 +151,11 @@ function ReviewsContent() {
         if (listIdParam) {
             setListId(listIdParam);
             setViewMode('list');
-            // Will fetch reviews in the separate effect when user/listId are set
-        }
+                    }
         
         initialRenderRef.current = false;
-    }, [searchParams]); // Don't depend on the fetch functions
+    }, [searchParams]);
     
-    // Use a separate effect to fetch data when dependencies change
     useEffect(() => {
         if (initialRenderRef.current) return;
         
@@ -170,7 +164,7 @@ function ReviewsContent() {
         } else if (viewMode === 'user' && user) {
             fetchUserReviews(user.user_id);
         }
-    }, [listId, user, viewMode]); // Only trigger on state changes, not on function changes
+    }, [listId, user, viewMode, fetchReviewsForList, fetchUserReviews]);
 
     function handleSearch(e: React.FormEvent) {
         e.preventDefault();
