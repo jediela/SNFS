@@ -9,6 +9,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function ViewPortfolio() {
     const [user, setUser] = useState<{
@@ -18,7 +19,7 @@ export default function ViewPortfolio() {
     const [portfolios, setPortfolios] = useState<
         {
             portfolio_id: string;
-            user_id: string;
+            owner_id: string;
             name: string;
             balance: number;
         }[]
@@ -28,13 +29,14 @@ export default function ViewPortfolio() {
         if (!user) return;
         try {
             const res = await fetch(
-                `http://localhost:8000/portfolios/view?userId=${user.user_id}`,
+                `http://localhost:8000/portfolios/view?userId=${user?.user_id}`,
                 { method: 'GET' }
             );
             const data = await res.json();
-            setPortfolios(data.portfolios);
-        } catch (error) {
-            console.error('Error fetching portfolios:', error);
+            setPortfolios(data.portfolios || []);
+        } catch {
+            toast.error('Failed to refresh portfolios');
+            setPortfolios([]);
         }
     }
 
@@ -52,7 +54,7 @@ export default function ViewPortfolio() {
                 View Portfolios
             </h1>
 
-            {portfolios.length > 0 ? (
+            {portfolios && portfolios.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {portfolios.map((portfolio) => (
                         <Card key={portfolio.portfolio_id}>
@@ -70,7 +72,7 @@ export default function ViewPortfolio() {
                 </div>
             ) : (
                 <div className="text-center py-4">
-                    <p className="text-lg">No portfolios found.</p>
+                    <p className="text-lg">No portfolios found</p>
                 </div>
             )}
         </>
