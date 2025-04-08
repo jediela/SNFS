@@ -1,9 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Table,
     TableBody,
@@ -15,7 +13,10 @@ import {
 import { toast } from 'sonner';
 
 export default function ViewRequests() {
-    const [userId, setUserId] = useState('');
+    const [user, setUser] = useState<{
+        user_id: number;
+        username: string;
+    } | null>(null);
     const [requests, setRequests] = useState<
         {
             request_id: string;
@@ -25,23 +26,11 @@ export default function ViewRequests() {
         }[]
     >([]);
 
-    async function fetchRequests(e: React.FormEvent) {
-        e.preventDefault();
-        try {
-            const res = await fetch(
-                `http://localhost:8000/requests/view?userId=${userId}`
-            );
-            const data = await res.json();
-            setRequests(data.received_requests);
-        } catch (error) {
-            console.error('Error fetching requests:', error);
-        }
-    }
-
     async function fetchRequestsData() {
+        if (!user) return;
         try {
             const res = await fetch(
-                `http://localhost:8000/requests/view?userId=${userId}`,
+                `http://localhost:8000/requests/view?userId=${user?.user_id}`,
                 { method: 'GET' }
             );
             const data = await res.json();
@@ -88,25 +77,19 @@ export default function ViewRequests() {
         await fetchRequestsData();
     }
 
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) setUser(JSON.parse(storedUser));
+    }, []);
+    useEffect(() => {
+        if (user) fetchRequestsData();
+    }, [user]);
+
     return (
         <div className="grid w-full gap-2 p-4 max-w-4xl mx-auto">
             <h1 className="pb-5 text-3xl font-bold text-center">
                 View Friend Requests
             </h1>
-
-            <form className="flex gap-2" onSubmit={fetchRequests}>
-                <div className="flex-1 space-y-2">
-                    <Label>User ID</Label>
-                    <Input
-                        placeholder="Enter your user ID"
-                        value={userId}
-                        onChange={(e) => setUserId(e.target.value)}
-                    />
-                </div>
-                <div className="flex items-end">
-                    <Button type="submit">Get friend requests</Button>
-                </div>
-            </form>
 
             <div className="p-2" />
 
