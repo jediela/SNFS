@@ -1,6 +1,7 @@
 from flask import jsonify
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from  .portfolios_db import create_portfolio
 from .base import get_connection
 
 
@@ -15,7 +16,12 @@ def register_user(username, password):
             user = cur.fetchone()
         conn.commit()
         if user:
-            return jsonify({"message": "User Registered", "user": user}), 201
+            # Create a default portfolio for the user
+            portfolio = create_portfolio(user["user_id"], "Portfolio 1")
+            if portfolio: 
+                return jsonify({"message": "User registered & default portfolio created", "user": user}), 201
+            else: 
+                return jsonify({"error": "User registration failed"}), 500
         else:
             return jsonify({"error": "User registration failed"}), 500
     except psycopg2.Error as e:
