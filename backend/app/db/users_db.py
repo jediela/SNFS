@@ -16,12 +16,15 @@ def register_user(username, password):
             user = cur.fetchone()
         conn.commit()
         if user:
-            # Create a default portfolio for the user
-            portfolio = create_portfolio(user["user_id"], "Portfolio 1")
-            if portfolio: 
-                return jsonify({"message": "User registered & default portfolio created", "user": user}), 201
-            else: 
-                return jsonify({"error": "User registration failed"}), 500
+            # User registered successfully, now attempt to create a default portfolio
+            try:
+                portfolio = create_portfolio(user["user_id"], "Portfolio 1")
+                if portfolio:
+                    return jsonify({"message": "User registered & default portfolio created", "user": user}), 201
+                else:
+                    return jsonify({"message": "User registered but portfolio creation failed", "user": user}), 201
+            except Exception as e:
+                return jsonify({"message": "User registered but portfolio creation failed", "user": user, "error": str(e)}), 201
         else:
             return jsonify({"error": "User registration failed"}), 500
     except psycopg2.Error as e:
