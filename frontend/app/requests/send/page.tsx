@@ -2,15 +2,19 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function SendRequest() {
-    const [senderId, setSenderId] = useState('');
+    const [user, setUser] = useState<{
+        user_id: number;
+        username: string;
+    } | null>(null);
     const [receiverId, setReceiverId] = useState('');
 
     async function handleSend(e: React.FormEvent) {
         e.preventDefault();
+        if (!user) return;
         try {
             const res = await fetch('http://localhost:8000/requests/send', {
                 method: 'POST',
@@ -18,7 +22,7 @@ export default function SendRequest() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    senderId,
+                    senderId: user.user_id,
                     receiverId,
                 }),
             });
@@ -30,12 +34,16 @@ export default function SendRequest() {
             toast.success(data.message, {
                 description: `request_id: ${data.request.request_id}, sender_id: ${data.request.from_user_id}, receiver_id: ${data.request.to_user_id}, Status: ${data.request.status}`,
             });
-            setSenderId('');
             setReceiverId('');
         } catch (error) {
             toast.error(String(error));
         }
     }
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) setUser(JSON.parse(storedUser));
+    }, []);
 
     return (
         <>
@@ -44,15 +52,6 @@ export default function SendRequest() {
             </h1>
             <form onSubmit={handleSend}>
                 <div className="flex flex-col gap-6">
-                    <div className="grid gap-2">
-                        <Label>Your User ID</Label>
-                        <Input
-                            placeholder="Sender User ID"
-                            value={senderId}
-                            required
-                            onChange={(e) => setSenderId(e.target.value)}
-                        />
-                    </div>
                     <div className="grid gap-2">
                         <div className="flex items-center">
                             <Label>Send Request to: User ID</Label>
