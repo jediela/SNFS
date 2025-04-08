@@ -3,15 +3,19 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function CreatePortfolio() {
-    const [userId, setUserId] = useState('');
+    const [user, setUser] = useState<{
+        user_id: number;
+        username: string;
+    } | null>(null);
     const [portfolioName, setPortfolioName] = useState('');
 
     async function handleCreate(e: React.FormEvent) {
         e.preventDefault();
+        if (!user) return;
         try {
             const res = await fetch('http://localhost:8000/portfolios/create', {
                 method: 'POST',
@@ -19,7 +23,7 @@ export default function CreatePortfolio() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    userId,
+                    userId: user.user_id,
                     portfolioName,
                 }),
             });
@@ -31,12 +35,16 @@ export default function CreatePortfolio() {
             toast.success(data.message, {
                 description: `portfolio_id: ${data.portfolio.portfolio_id}, user_id: ${data.portfolio.user_id}, name: ${data.portfolio.name}, balance: ${data.portfolio.balance}`,
             });
-            setUserId('');
             setPortfolioName('');
         } catch (error) {
             toast.error(String(error));
         }
     }
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) setUser(JSON.parse(storedUser));
+    }, []);
 
     return (
         <>
@@ -45,15 +53,6 @@ export default function CreatePortfolio() {
             </h1>
             <form onSubmit={handleCreate}>
                 <div className="flex flex-col gap-6">
-                    <div className="grid gap-2">
-                        <Label>Your User ID</Label>
-                        <Input
-                            placeholder="Your User ID"
-                            value={userId}
-                            required
-                            onChange={(e) => setUserId(e.target.value)}
-                        />
-                    </div>
                     <div className="grid gap-2">
                         <div className="flex items-center">
                             <Label>Portfolio Name</Label>
