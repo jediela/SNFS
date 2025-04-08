@@ -15,7 +15,9 @@ def create_portfolio(user_id, portfolio_name):
             portfolio = cur.fetchone()
         conn.commit()
         if portfolio:
-            return jsonify({"message": "Portfolio created", "portfolio": portfolio}), 201
+            return jsonify(
+                {"message": "Portfolio created", "portfolio": portfolio}
+            ), 201
         else:
             return jsonify({"error": "Portfolio creation failed"}), 500
     except psycopg2.Error as e:

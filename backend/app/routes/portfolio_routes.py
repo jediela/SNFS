@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.db.portfolis_db import create_portfolio
+from app.db.portfolios_db import create_portfolio
 
 portfolio_bp = Blueprint("portfolio_bp", __name__, url_prefix="/portfolios")
 
@@ -12,5 +12,5 @@ def create_portfolio_route():
 
     if not userId or not portfolio_name:
         return jsonify({"error": "User ID and portfolio name are required"}), 400
-    
+
     return create_portfolio(userId, portfolio_name)

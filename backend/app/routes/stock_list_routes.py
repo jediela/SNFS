@@ -19,7 +19,7 @@ def create_list():
 
     if not user_id or not name or not visibility:
         return jsonify({"error": "User ID, name, and visibility are required"}), 400
-        
+
     if visibility not in ["private", "shared", "public"]:
         return jsonify({"error": "Visibility must be private, shared, or public"}), 400
 
@@ -35,7 +35,9 @@ def add_item():
     num_shares = data.get("num_shares")
 
     if not list_id or not symbol or num_shares is None:
-        return jsonify({"error": "List ID, symbol, and number of shares are required"}), 400
+        return jsonify(
+            {"error": "List ID, symbol, and number of shares are required"}
+        ), 400
 
     # Verify the user owns this list if user_id is provided
     if user_id and not verify_user_owns_list(user_id, list_id):
@@ -49,14 +51,14 @@ def get_lists():
     # Get optional parameters
     user_id = request.args.get("user_id")
     search = request.args.get("search")
-    
+
     # Convert user_id to int if it exists
     if user_id:
         try:
             user_id = int(user_id)
         except ValueError:
             return jsonify({"error": "Invalid user ID format"}), 400
-    
+
     return get_accessible_stock_lists(user_id, search)
 
 
@@ -71,8 +73,8 @@ def get_lists_for_user(user_id):
 def delete_list(list_id):
     data = request.json
     user_id = data.get("user_id")
-    
+
     if not user_id:
         return jsonify({"error": "User ID is required"}), 400
-        
+
     return delete_stock_list(list_id, user_id)
