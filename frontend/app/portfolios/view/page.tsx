@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export default function ViewPortfolio() {
     const [user, setUser] = useState<{
@@ -24,6 +25,7 @@ export default function ViewPortfolio() {
             balance: number;
         }[]
     >([]);
+    const router = useRouter();
 
     async function fetchPortfolios() {
         if (!user) return;
@@ -48,6 +50,10 @@ export default function ViewPortfolio() {
         if (user) fetchPortfolios();
     }, [user]);
 
+    function handleViewClick(portfolioId: string) {
+        router.push(`/portfolios/${portfolioId}`);
+    }
+
     return (
         <>
             <h1 className="pb-5 text-3xl font-bold text-center">
@@ -65,7 +71,13 @@ export default function ViewPortfolio() {
                                 <p>Balance: ${portfolio.balance}</p>
                             </CardContent>
                             <CardFooter>
-                                <Button>View</Button>
+                                <Button
+                                    onClick={() =>
+                                        handleViewClick(portfolio.portfolio_id)
+                                    }
+                                >
+                                    View
+                                </Button>
                             </CardFooter>
                         </Card>
                     ))}
