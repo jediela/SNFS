@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -26,7 +26,8 @@ export default function ViewRequests() {
         }[]
     >([]);
 
-    async function fetchRequestsData() {
+    // Use useCallback to memoize the function
+    const fetchRequestsData = useCallback(async () => {
         if (!user) return;
         try {
             const res = await fetch(
@@ -38,7 +39,7 @@ export default function ViewRequests() {
         } catch {
             toast.error('Failed to refresh requests');
         }
-    }
+    }, [user]); // Add user as dependency
 
     async function handleAccept(requestId: string) {
         const res = await fetch(
@@ -80,9 +81,10 @@ export default function ViewRequests() {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
     }, []);
+    
     useEffect(() => {
         if (user) fetchRequestsData();
-    }, [user]);
+    }, [user, fetchRequestsData]); // Add fetchRequestsData to the dependency array
 
     return (
         <div className="grid w-full gap-2 p-4 max-w-4xl mx-auto">

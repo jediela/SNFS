@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS CashTransactions (
 
 -- Stock table
 CREATE TABLE IF NOT EXISTS Stocks (
-    symbol VARCHAR(10) PRIMARY KEY,
+    symbol VARCHAR(5) PRIMARY KEY,
     company_name VARCHAR(100) NOT NULL
 );
 
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS Stocks (
 -- Stock Holdings table
 CREATE TABLE IF NOT EXISTS StockHoldings (
     portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
-    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
+    symbol VARCHAR(5) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
     num_shares INT NOT NULL CHECK (num_shares >= 0),
     PRIMARY KEY (portfolio_id, symbol)
 );
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS StockHoldings (
 CREATE TABLE IF NOT EXISTS StockTransactions (
     transaction_id SERIAL PRIMARY KEY,
     portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
-    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
+    symbol VARCHAR(5) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
     type VARCHAR(10) CHECK (type IN ('buy', 'sell')),
     num_shares INT NOT NULL CHECK (num_shares > 0),
     price DECIMAL(15, 2) NOT NULL,  -- Price per share at transaction time
@@ -65,19 +65,19 @@ CREATE TABLE IF NOT EXISTS StockTransactions (
 
 -- Stock Prices table
 CREATE TABLE IF NOT EXISTS StockPrices (
-    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
-    date DATE NOT NULL,
+    symbol VARCHAR(5) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
+    timestamp DATE NOT NULL,
     open DECIMAL(15, 2) NOT NULL,
     high DECIMAL(15, 2) NOT NULL,
     low DECIMAL(15, 2) NOT NULL,
     close DECIMAL(15, 2) NOT NULL,
     volume BIGINT NOT NULL,
-    PRIMARY KEY (symbol, date)  -- Unique price per symbol per day
+    PRIMARY KEY (symbol, timestamp)  -- Unique price per symbol per day
 );
 
 -- Stock Predictions table
 CREATE TABLE IF NOT EXISTS StockPredictions (
-    symbol VARCHAR(10) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
+    symbol VARCHAR(5) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
     prediction_date DATE NOT NULL,
     future_date DATE NOT NULL,
     predicted_close DECIMAL(15, 2) NOT NULL,

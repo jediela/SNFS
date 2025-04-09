@@ -102,6 +102,14 @@ export default function Navbar() {
                     </MenubarContent>
                 </MenubarMenu>
                 <MenubarMenu>
+                    <MenubarTrigger>Stocks</MenubarTrigger>
+                    <MenubarContent>
+                        <MenubarItem asChild>
+                            <Link href="/stocks/view">View Stocks</Link>
+                        </MenubarItem>
+                    </MenubarContent>
+                </MenubarMenu>
+                <MenubarMenu>
                     <MenubarTrigger>Requests</MenubarTrigger>
                     <MenubarContent>
                         <MenubarItem asChild>
