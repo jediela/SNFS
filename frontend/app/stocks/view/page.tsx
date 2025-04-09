@@ -12,7 +12,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 
 interface StockPrice {
@@ -71,15 +71,15 @@ export default function StocksView() {
         }
     }, [symbolSearch]);
 
-    // Fetch stock data
-    const fetchStocks = async (resetPage = false) => {
+    // Use useCallback to memoize the function
+    const fetchStocks = useCallback(async (resetPage = false) => {
         if (resetPage) {
             setPage(1);
         }
-        
+
         setLoading(true);
         const currentPage = resetPage ? 1 : page;
-        
+
         try {
             let url = `http://localhost:8000/stocks/?page=${currentPage}&per_page=${PER_PAGE}`;
             if (symbol) url += `&symbol=${symbol}`;
@@ -90,16 +90,18 @@ export default function StocksView() {
             if (!res.ok) {
                 throw new Error('Failed to fetch stock data');
             }
-            
+
             const data = await res.json();
             setStocks(data.stocks || []);
-            setPagination(data.pagination || {
-                page: currentPage,
-                per_page: PER_PAGE,
-                total_items: 0,
-                total_pages: 1,
-            });
-            
+            setPagination(
+                data.pagination || {
+                    page: currentPage,
+                    per_page: PER_PAGE,
+                    total_items: 0,
+                    total_pages: 1,
+                }
+            );
+
             if (data.stocks?.length === 0) {
                 toast.info('No stock data found for the specified criteria');
             }
@@ -110,12 +112,12 @@ export default function StocksView() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, symbol, startDate, endDate]); // Add all dependencies
 
     // Initial data load
     useEffect(() => {
         fetchStocks();
-    }, [page]);
+    }, [page, fetchStocks]); // Add fetchStocks to the dependency array
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -151,11 +153,11 @@ export default function StocksView() {
     // pagination rendering
     function renderPagination() {
         const { page, total_pages } = pagination;
-        
+
         // Calculate range of pages to show
         let startPage = Math.max(1, page - 2);
         let endPage = Math.min(total_pages, page + 2);
-        
+
         // Adjust to always show 5 pages when possible
         if (endPage - startPage < 4) {
             if (startPage === 1) {
@@ -164,25 +166,25 @@ export default function StocksView() {
                 startPage = Math.max(1, endPage - 4);
             }
         }
-        
+
         const pages = [];
         for (let i = startPage; i <= endPage; i++) {
             pages.push(i);
         }
-        
+
         return (
             <div className="flex items-center justify-center gap-1">
-                <button 
+                <button
                     onClick={() => handlePageChange(page - 1)}
                     disabled={page <= 1}
                     className={`px-3 py-1 rounded border ${page <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
                 >
                     Previous
                 </button>
-                
+
                 {startPage > 1 && (
                     <>
-                        <button 
+                        <button
                             onClick={() => handlePageChange(1)}
                             className="px-3 py-1 rounded border hover:bg-gray-100"
                         >
@@ -191,9 +193,9 @@ export default function StocksView() {
                         {startPage > 2 && <span>...</span>}
                     </>
                 )}
-                
+
                 {pages.map((p) => (
-                    <button 
+                    <button
                         key={p}
                         onClick={() => handlePageChange(p)}
                         className={`px-3 py-1 rounded border ${p === page ? 'bg-gray-200 font-bold' : 'hover:bg-gray-100'}`}
@@ -201,11 +203,11 @@ export default function StocksView() {
                         {p}
                     </button>
                 ))}
-                
+
                 {endPage < total_pages && (
                     <>
                         {endPage < total_pages - 1 && <span>...</span>}
-                        <button 
+                        <button
                             onClick={() => handlePageChange(total_pages)}
                             className="px-3 py-1 rounded border hover:bg-gray-100"
                         >
@@ -213,8 +215,8 @@ export default function StocksView() {
                         </button>
                     </>
                 )}
-                
-                <button 
+
+                <button
                     onClick={() => handlePageChange(page + 1)}
                     disabled={page >= total_pages}
                     className={`px-3 py-1 rounded border ${page >= total_pages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
@@ -242,26 +244,31 @@ export default function StocksView() {
                                         placeholder="e.g., AAPL"
                                         value={symbol}
                                         onChange={(e) => {
-                                            setSymbol(e.target.value.toUpperCase());
-                                            setSymbolSearch(e.target.value.toUpperCase());
+                                            setSymbol(
+                                                e.target.value.toUpperCase()
+                                            );
+                                            setSymbolSearch(
+                                                e.target.value.toUpperCase()
+                                            );
                                         }}
                                     />
-                                    {availableSymbols.length > 0 && symbolSearch && (
-                                        <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
-                                            {availableSymbols.map((s) => (
-                                                <div
-                                                    key={s}
-                                                    className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                    onClick={() => {
-                                                        setSymbol(s);
-                                                        setSymbolSearch('');
-                                                    }}
-                                                >
-                                                    {s}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    {availableSymbols.length > 0 &&
+                                        symbolSearch && (
+                                            <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                                                {availableSymbols.map((s) => (
+                                                    <div
+                                                        key={s}
+                                                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                        onClick={() => {
+                                                            setSymbol(s);
+                                                            setSymbolSearch('');
+                                                        }}
+                                                    >
+                                                        {s}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -270,7 +277,9 @@ export default function StocksView() {
                                     id="startDate"
                                     type="date"
                                     value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
+                                    onChange={(e) =>
+                                        setStartDate(e.target.value)
+                                    }
                                 />
                             </div>
                             <div className="space-y-2">
@@ -303,61 +312,100 @@ export default function StocksView() {
                                     <TableHead>Symbol</TableHead>
                                     <TableHead>Date</TableHead>
                                     {/* Replace Tooltip with title attribute */}
-                                    <TableHead className="text-right" title="First trade price of the day">
+                                    <TableHead
+                                        className="text-right"
+                                        title="First trade price of the day"
+                                    >
                                         <div className="flex items-center justify-end">
-                                            Open <span className="ml-1 text-gray-500 text-xs"></span>
+                                            Open{' '}
+                                            <span className="ml-1 text-gray-500 text-xs"></span>
                                         </div>
                                     </TableHead>
-                                    <TableHead className="text-right" title="Highest price of the day">
+                                    <TableHead
+                                        className="text-right"
+                                        title="Highest price of the day"
+                                    >
                                         <div className="flex items-center justify-end">
-                                            High <span className="ml-1 text-gray-500 text-xs"></span>
+                                            High{' '}
+                                            <span className="ml-1 text-gray-500 text-xs"></span>
                                         </div>
                                     </TableHead>
-                                    <TableHead className="text-right" title="Lowest price of the day">
+                                    <TableHead
+                                        className="text-right"
+                                        title="Lowest price of the day"
+                                    >
                                         <div className="flex items-center justify-end">
-                                            Low <span className="ml-1 text-gray-500 text-xs"></span>
+                                            Low{' '}
+                                            <span className="ml-1 text-gray-500 text-xs"></span>
                                         </div>
                                     </TableHead>
-                                    <TableHead className="text-right" title="Last trade price of the day">
+                                    <TableHead
+                                        className="text-right"
+                                        title="Last trade price of the day"
+                                    >
                                         <div className="flex items-center justify-end">
-                                            Close <span className="ml-1 text-gray-500 text-xs"></span>
+                                            Close{' '}
+                                            <span className="ml-1 text-gray-500 text-xs"></span>
                                         </div>
                                     </TableHead>
-                                    <TableHead className="text-right" title="Total shares traded">
+                                    <TableHead
+                                        className="text-right"
+                                        title="Total shares traded"
+                                    >
                                         <div className="flex items-center justify-end">
-                                            Volume <span className="ml-1 text-gray-500 text-xs"></span>
+                                            Volume{' '}
+                                            <span className="ml-1 text-gray-500 text-xs"></span>
                                         </div>
                                     </TableHead>
-                                    </TableRow>
+                                </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     Array.from({ length: 5 }).map((_, i) => (
                                         <TableRow key={i}>
-                                            {Array.from({ length: 7 }).map((_, j) => (
-                                                <TableCell key={j}>
-                                                    <div className="h-6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
-                                                </TableCell>
-                                            ))}
+                                            {Array.from({ length: 7 }).map(
+                                                (_, j) => (
+                                                    <TableCell key={j}>
+                                                        <div className="h-6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
+                                                    </TableCell>
+                                                )
+                                            )}
                                         </TableRow>
                                     ))
                                 ) : stocks && stocks.length > 0 ? (
                                     stocks.map((stock, index) => (
-                                        <TableRow key={`${stock.symbol}-${stock.timestamp}-${index}`}>
+                                        <TableRow
+                                            key={`${stock.symbol}-${stock.timestamp}-${index}`}
+                                        >
                                             <TableCell className="font-medium">
                                                 {stock.symbol}
                                             </TableCell>
-                                            <TableCell>{formatDate(stock.timestamp)}</TableCell>
-                                            <TableCell className="text-right">{formatNumber(stock.open)}</TableCell>
-                                            <TableCell className="text-right">{formatNumber(stock.high)}</TableCell>
-                                            <TableCell className="text-right">{formatNumber(stock.low)}</TableCell>
-                                            <TableCell className="text-right">{formatNumber(stock.close)}</TableCell>
-                                            <TableCell className="text-right">{formatVolume(stock.volume)}</TableCell>
+                                            <TableCell>
+                                                {formatDate(stock.timestamp)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {formatNumber(stock.open)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {formatNumber(stock.high)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {formatNumber(stock.low)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {formatNumber(stock.close)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {formatVolume(stock.volume)}
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center py-10">
+                                        <TableCell
+                                            colSpan={7}
+                                            className="text-center py-10"
+                                        >
                                             No stock data found
                                         </TableCell>
                                     </TableRow>
