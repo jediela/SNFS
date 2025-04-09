@@ -35,8 +35,7 @@ export default function ViewRequests() {
             );
             const data = await res.json();
             setRequests(data.received_requests);
-        } catch (error) {
-            console.error('Error fetching requests:', error);
+        } catch {
             toast.error('Failed to refresh requests');
         }
     }

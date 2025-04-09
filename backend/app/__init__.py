@@ -12,6 +12,7 @@ def create_app():
     from app.routes.stock_list_routes import stock_list_bp
     from app.routes.review_routes import review_bp
     from app.routes.request_routes import request_bp
+    from app.routes.portfolio_routes import portfolio_bp
 
     # Register blueprints
     app.register_blueprint(car_bp)
@@ -19,5 +20,6 @@ def create_app():
     app.register_blueprint(stock_list_bp)
     app.register_blueprint(review_bp)
     app.register_blueprint(request_bp)
+    app.register_blueprint(portfolio_bp)
 
     return app

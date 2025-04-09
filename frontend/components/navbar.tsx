@@ -77,11 +77,16 @@ export default function Navbar() {
                                 </MenubarItem>
                             </>
                         ) : (
-                            <MenubarItem asChild>
-                                <Link href="/users/portfolio">
-                                    View Portfolio
-                                </Link>
-                            </MenubarItem>
+                            <div className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+                                Logged in as:
+                                <span className="font-bold">
+                                    {user.username}
+                                </span>
+                                | id:
+                                <span className="font-bold">
+                                    {user.user_id}
+                                </span>
+                            </div>
                         )}
                     </MenubarContent>
                 </MenubarMenu>
@@ -112,6 +117,19 @@ export default function Navbar() {
                     <MenubarContent>
                         <MenubarItem asChild>
                             <Link href="/reviews/view">View Reviews</Link>
+                        </MenubarItem>
+                    </MenubarContent>
+                </MenubarMenu>
+                <MenubarMenu>
+                    <MenubarTrigger>Portfolios</MenubarTrigger>
+                    <MenubarContent>
+                        <MenubarItem asChild>
+                            <Link href="/portfolios/create">
+                                Create Portfolio
+                            </Link>
+                        </MenubarItem>
+                        <MenubarItem asChild>
+                            <Link href="/portfolios/view">View Portfolios</Link>
                         </MenubarItem>
                     </MenubarContent>
                 </MenubarMenu>
