@@ -41,11 +41,15 @@ def handle_cash_transaction(portfolio_id, transaction_type, amount):
             conn.commit()
 
             if transaction:
+                cur.execute("SELECT balance FROM Portfolios WHERE portfolio_id = %s", (portfolio_id,))
+                balance_result = cur.fetchone()
+                
                 return jsonify({
                     "message": f"{transaction_type.capitalize()} successful",
                     "transaction": transaction,
-                    "new_balance": transaction['balance']
+                    "new_balance": balance_result['balance'] if balance_result else None
                 }), 201
+
                 
             # If no rows affected
             error_msg = "Withdrawal failed: Insufficient funds" if transaction_type == 'withdrawal' \

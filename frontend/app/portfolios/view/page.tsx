@@ -70,13 +70,20 @@ export default function ViewPortfolio() {
                             <CardContent>
                                 <p>Balance: ${portfolio.balance}</p>
                             </CardContent>
-                            <CardFooter>
+                            <CardFooter className="flex flex-col items-start gap-2">
                                 <Button
                                     onClick={() =>
                                         handleViewClick(portfolio.portfolio_id)
                                     }
                                 >
-                                    View
+                                    View Cash Transactions
+                                </Button>
+                                <Button
+                                    onClick={() =>
+                                        handleViewClick(portfolio.portfolio_id)
+                                    }
+                                >
+                                    View Stock Transactions
                                 </Button>
                             </CardFooter>
                         </Card>

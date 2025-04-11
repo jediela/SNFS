@@ -78,6 +78,44 @@ export default function PortfolioDetails() {
         }
     }
 
+    async function handleTransaction() {
+        if (!user || !amount || !id) return;
+
+        try {
+            const response = await fetch(
+                `http://localhost:8000/transactions/`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        portfolio_id: Number(id),
+                        type: transactionType, // 'deposit' or 'withdrawal'
+                        amount: parseFloat(amount),
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json();
+                toast.error(error?.error || 'Transaction failed');
+                return;
+            }
+
+            const result = await response.json();
+            toast.success(result.message || 'Transaction successful');
+
+            // Optional: refetch data to reflect balance and transactions
+            fetchPortfolioData();
+            setOpenDialog(false);
+            setAmount('');
+        } catch (err) {
+            toast.error('An error occurred during the transaction.');
+            console.error(err);
+        }
+    }
+
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
@@ -109,7 +147,7 @@ export default function PortfolioDetails() {
                 ← Back to Portfolios
             </Button>
             <h1 className="text-3xl font-bold mb-6">
-                PORTFOLIO: {portfolio?.name}
+                {portfolio?.name} (ID: {portfolio?.portfolio_id})
             </h1>
 
             {/* Balance Display */}
@@ -152,19 +190,7 @@ export default function PortfolioDetails() {
                                 min="0.01"
                                 step="0.01"
                             />
-                            <Button
-                                onClick={() => {
-                                    // Placeholder logic for now
-                                    toast.success(
-                                        `${transactionType} of $${amount} ready to send`
-                                    );
-                                    setOpenDialog(false);
-                                    setAmount('');
-                                }}
-                                disabled={!amount}
-                            >
-                                Confirm
-                            </Button>
+                            <Button onClick={handleTransaction}>Confirm</Button>
                         </div>
                     </DialogContent>
                 </Dialog>
@@ -172,7 +198,7 @@ export default function PortfolioDetails() {
 
             {/* Transactions Section */}
             <div className="mb-8">
-                <h2 className="text-xl font-semibold mb-4">Transactions</h2>
+                <h2 className="text-xl font-semibold mb-4">Recent Cash Transactions</h2>
 
                 {transactions.length === 0 ? (
                     <div className="text-center text-muted-foreground py-6">
