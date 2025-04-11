@@ -72,47 +72,52 @@ export default function StocksView() {
     }, [symbolSearch]);
 
     // Use useCallback to memoize the function
-    const fetchStocks = useCallback(async (resetPage = false) => {
-        if (resetPage) {
-            setPage(1);
-        }
-
-        setLoading(true);
-        const currentPage = resetPage ? 1 : page;
-
-        try {
-            let url = `http://localhost:8000/stocks/?page=${currentPage}&per_page=${PER_PAGE}`;
-            if (symbol) url += `&symbol=${symbol}`;
-            if (startDate) url += `&start_date=${startDate}`;
-            if (endDate) url += `&end_date=${endDate}`;
-
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error('Failed to fetch stock data');
+    const fetchStocks = useCallback(
+        async (resetPage = false) => {
+            if (resetPage) {
+                setPage(1);
             }
 
-            const data = await res.json();
-            setStocks(data.stocks || []);
-            setPagination(
-                data.pagination || {
-                    page: currentPage,
-                    per_page: PER_PAGE,
-                    total_items: 0,
-                    total_pages: 1,
+            setLoading(true);
+            const currentPage = resetPage ? 1 : page;
+
+            try {
+                let url = `http://localhost:8000/stocks/?page=${currentPage}&per_page=${PER_PAGE}`;
+                if (symbol) url += `&symbol=${symbol}`;
+                if (startDate) url += `&start_date=${startDate}`;
+                if (endDate) url += `&end_date=${endDate}`;
+
+                const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error('Failed to fetch stock data');
                 }
-            );
 
-            if (data.stocks?.length === 0) {
-                toast.info('No stock data found for the specified criteria');
+                const data = await res.json();
+                setStocks(data.stocks || []);
+                setPagination(
+                    data.pagination || {
+                        page: currentPage,
+                        per_page: PER_PAGE,
+                        total_items: 0,
+                        total_pages: 1,
+                    }
+                );
+
+                if (data.stocks?.length === 0) {
+                    toast.info(
+                        'No stock data found for the specified criteria'
+                    );
+                }
+            } catch (error) {
+                console.error('Error fetching stock data:', error);
+                toast.error('Failed to load stock data');
+                setStocks([]);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error('Error fetching stock data:', error);
-            toast.error('Failed to load stock data');
-            setStocks([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [page, symbol, startDate, endDate]); // Add all dependencies
+        },
+        [page, symbol, startDate, endDate]
+    ); // Add all dependencies
 
     // Initial data load
     useEffect(() => {

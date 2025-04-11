@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.db.portfolios_db import create_portfolio, view_user_portfolios
+from app.db.portfolios_db import create_portfolio, view_user_portfolios, get_portfolio_by_id
 
 portfolio_bp = Blueprint("portfolio_bp", __name__, url_prefix="/portfolios")
 
@@ -24,3 +24,18 @@ def view_user_portfolios_route():
         return jsonify({"error": "User ID is required"}), 400
 
     return view_user_portfolios(userId)
+
+
+@portfolio_bp.route("/<int:portfolio_id>", methods=["GET"])
+def view_portfolio_by_id_route(portfolio_id):
+    user_id = request.args.get("userId")
+
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        return jsonify({"error": "Invalid User ID"}), 400
+
+    return get_portfolio_by_id(portfolio_id, user_id)

@@ -40,3 +40,22 @@ def view_user_portfolios(user_id):
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+
+
+def get_portfolio_by_id(portfolio_id, user_id):
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM Portfolios WHERE portfolio_id = %s AND user_id = %s;",
+                (portfolio_id, user_id)
+            )
+            portfolio = cur.fetchone()
+        if portfolio:
+            return jsonify({"portfolio": portfolio}), 200
+        else:
+            return jsonify({"message": "Portfolio not found or access denied"}), 404
+    except psycopg2.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
