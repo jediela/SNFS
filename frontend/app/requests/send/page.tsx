@@ -60,7 +60,9 @@ export default function SendRequest() {
                             placeholder="Receiver Username"
                             value={receiverUsername}
                             required
-                            onChange={(e) => setReceiverUsername(e.target.value)}
+                            onChange={(e) =>
+                                setReceiverUsername(e.target.value)
+                            }
                         />
                     </div>
                     <Button type="submit" className="w-full">
