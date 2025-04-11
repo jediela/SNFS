@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from flask import jsonify
 import psycopg2
 from psycopg2.extras import RealDictCursor
