@@ -121,6 +121,16 @@ export default function Navbar() {
                     </MenubarContent>
                 </MenubarMenu>
                 <MenubarMenu>
+                    <MenubarTrigger>Friends</MenubarTrigger>
+                    <MenubarContent>
+                        <MenubarItem asChild>
+                            <Link href="/friends">
+                                My Friends
+                            </Link>
+                        </MenubarItem>
+                    </MenubarContent>
+                </MenubarMenu>
+                <MenubarMenu>
                     <MenubarTrigger>Reviews</MenubarTrigger>
                     <MenubarContent>
                         <MenubarItem asChild>
