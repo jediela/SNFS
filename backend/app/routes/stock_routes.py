@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.db.stock_db import create_stock_table, load_stock_csv, get_stock_data, get_stock_symbols, predict_stock_prices
+from app.db.stock_db import create_stock_table, load_stock_csv, get_stock_data, get_stock_symbols, predict_stock_prices, add_custom_stock_data
 from datetime import datetime, timedelta
 
 stock_bp = Blueprint("stock_bp", __name__, url_prefix="/stocks")
@@ -41,3 +41,37 @@ def predict_stock_future(symbol):
         return jsonify({"error": "Days to predict must be between 1 and 365"}), 400
         
     return predict_stock_prices(symbol, days)
+
+@stock_bp.route("/add", methods=["POST"])
+def add_stock_data():
+    """Add custom stock price data"""
+    data = request.json
+    
+    user_id = data.get("user_id")
+    symbol = data.get("symbol")
+    timestamp = data.get("timestamp")
+    close = data.get("close")
+    volume = data.get("volume")
+    
+    open_price = data.get("open")
+    high = data.get("high")
+    low = data.get("low")
+    
+    if not all([user_id, symbol, timestamp, close is not None, volume is not None]):
+        return jsonify({"error": "User ID, symbol, timestamp, close price, and volume are required"}), 400
+    
+    try:
+        datetime.strptime(timestamp, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({"error": "Invalid timestamp format. Use YYYY-MM-DD"}), 400
+        
+    return add_custom_stock_data(
+        user_id=user_id,
+        symbol=symbol.upper(),
+        timestamp=timestamp,
+        open_price=open_price,
+        high=high,
+        low=low,
+        close=close,
+        volume=volume
+    )
