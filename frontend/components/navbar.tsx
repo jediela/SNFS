@@ -124,9 +124,7 @@ export default function Navbar() {
                     <MenubarTrigger>Friends</MenubarTrigger>
                     <MenubarContent>
                         <MenubarItem asChild>
-                            <Link href="/friends">
-                                My Friends
-                            </Link>
+                            <Link href="/friends">My Friends</Link>
                         </MenubarItem>
                     </MenubarContent>
                 </MenubarMenu>

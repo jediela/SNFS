@@ -12,9 +12,8 @@ def get_friends():
         return jsonify({"error": "User ID is required"}), 400
 
     return get_users_friends(user_id)
+
 @friends_bp.route("/remove", methods=["DELETE"])
-
-
 def delete_friend():
     data = request.json
     user_id = data.get("userId")
@@ -22,5 +21,5 @@ def delete_friend():
 
     if not user_id or not friend_id:
         return jsonify({"error": "User ID and Friend ID are required"}), 400
-
+    
     return remove_friend(user_id, friend_id)
