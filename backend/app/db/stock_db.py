@@ -100,9 +100,9 @@ def get_stock_data(symbol="", start_date="", end_date="", page=1, per_page=20):
             params = []
             
             if symbol:
-                query += " AND symbol ILIKE %s"
-                count_query += " AND symbol ILIKE %s"
-                params.append(f"%{symbol}%")
+                query += " AND symbol = %s"
+                count_query += " AND symbol = %s"
+                params.append(symbol)
                 
             if start_date:
                 query += " AND timestamp >= %s"
@@ -125,8 +125,8 @@ def get_stock_data(symbol="", start_date="", end_date="", page=1, per_page=20):
                     ORDER BY volume DESC
                 """
             else:
-                # Order by timestamp (most recent first) and symbol
-                query += " ORDER BY timestamp DESC, symbol ASC"
+                # Order by timestamp (ascending) for charts
+                query += " ORDER BY timestamp ASC, symbol ASC"
             
             # Add pagination
             query += " LIMIT %s OFFSET %s"

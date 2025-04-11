@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
     Card,
     CardContent,
@@ -27,7 +27,7 @@ export default function ViewPortfolio() {
     >([]);
     const router = useRouter();
 
-    async function fetchPortfolios() {
+    const fetchPortfolios = useCallback(async () => {
         if (!user) return;
         try {
             const res = await fetch(
@@ -40,15 +40,16 @@ export default function ViewPortfolio() {
             toast.error('Failed to refresh portfolios');
             setPortfolios([]);
         }
-    }
+    }, [user]);
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
     }, []);
+    
     useEffect(() => {
         if (user) fetchPortfolios();
-    }, [user]);
+    }, [user, fetchPortfolios]);
 
     function handleViewCashTransactions(portfolioId: string) {
         router.push(`/portfolios/${portfolioId}/cashTransactions`);
