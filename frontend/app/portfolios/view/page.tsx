@@ -50,8 +50,12 @@ export default function ViewPortfolio() {
         if (user) fetchPortfolios();
     }, [user]);
 
-    function handleViewClick(portfolioId: string) {
-        router.push(`/portfolios/${portfolioId}`);
+    function handleViewCashTransactions(portfolioId: string) {
+        router.push(`/portfolios/${portfolioId}/cashTransactions`);
+    }
+
+    function handleViewPortfolioStocks(portfolioId: string) {
+        router.push(`/portfolios/${portfolioId}/stocks`);
     }
 
     return (
@@ -73,14 +77,18 @@ export default function ViewPortfolio() {
                             <CardFooter className="flex flex-col items-start gap-2">
                                 <Button
                                     onClick={() =>
-                                        handleViewClick(portfolio.portfolio_id)
+                                        handleViewCashTransactions(
+                                            portfolio.portfolio_id
+                                        )
                                     }
                                 >
                                     View Cash Transactions
                                 </Button>
                                 <Button
                                     onClick={() =>
-                                        handleViewClick(portfolio.portfolio_id)
+                                        handleViewPortfolioStocks(
+                                            portfolio.portfolio_id
+                                        )
                                     }
                                 >
                                     View Stock Transactions

@@ -62,7 +62,6 @@ export default function PortfolioDetails() {
                 { method: 'GET' }
             );
             const transactionsData = await transactionsRes.json();
-            console.log(transactionsData.transactions);
             setTransactions(transactionsData.transactions);
 
             const portfolioRes = await fetch(
@@ -161,7 +160,7 @@ export default function PortfolioDetails() {
                 <Dialog open={openDialog} onOpenChange={setOpenDialog}>
                     <DialogTrigger asChild>
                         <Button onClick={() => setTransactionType('deposit')}>
-                            Deposit
+                            Deposit Cash
                         </Button>
                     </DialogTrigger>
                     <DialogTrigger asChild>
@@ -169,7 +168,7 @@ export default function PortfolioDetails() {
                             variant="destructive"
                             onClick={() => setTransactionType('withdrawal')}
                         >
-                            Withdraw
+                            Withdraw Cash
                         </Button>
                     </DialogTrigger>
 
@@ -198,7 +197,9 @@ export default function PortfolioDetails() {
 
             {/* Transactions Section */}
             <div className="mb-8">
-                <h2 className="text-xl font-semibold mb-4">Recent Cash Transactions</h2>
+                <h2 className="text-xl font-semibold mb-4">
+                    Recent Cash Transactions
+                </h2>
 
                 {transactions.length === 0 ? (
                     <div className="text-center text-muted-foreground py-6">
