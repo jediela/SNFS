@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { 
@@ -39,15 +40,48 @@ interface StockPrice {
     symbol: string;
 }
 
+interface PredictedPrice {
+    timestamp: string;
+    predicted_close: number;
+    symbol: string;
+}
+
 type TimeInterval = 'week' | 'month' | 'quarter' | 'year' | '5years';
+type PredictionInterval = '7' | '30' | '90' | '180' | '365';
+type ViewMode = 'historical' | 'prediction';
 
 export default function StocksHistory() {
+    const formatIntervalLabel = (interval: TimeInterval): string => {
+        switch (interval) {
+            case 'week': return '1 Week';
+            case 'month': return '1 Month';
+            case 'quarter': return '3 Months';
+            case 'year': return '1 Year';
+            case '5years': return '5 Years';
+            default: return interval;
+        }
+    };
+
+    const formatPredictionLabel = (days: PredictionInterval): string => {
+        switch (days) {
+            case '7': return '1 Week';
+            case '30': return '1 Month';
+            case '90': return '3 Months';
+            case '180': return '6 Months';
+            case '365': return '1 Year';
+            default: return `${days} Days`;
+        }
+    };
+
     const [symbol, setSymbol] = useState('');
     const [selectedInterval, setSelectedInterval] = useState<TimeInterval>('month');
+    const [predictionDays, setPredictionDays] = useState<PredictionInterval>('30');
     const [stockData, setStockData] = useState<StockPrice[]>([]);
+    const [predictionData, setPredictionData] = useState<PredictedPrice[]>([]);
     const [loading, setLoading] = useState(false);
     const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
     const [symbolSearch, setSymbolSearch] = useState('');
+    const [viewMode, setViewMode] = useState<ViewMode>('historical');
 
     // Fixed date bounds for stock data
     const MIN_DATE = '2013-02-08'; // Lower bound date
@@ -55,7 +89,6 @@ export default function StocksHistory() {
 
     // Calculate start date based on selected interval within bounds
     const calculateStartDate = (interval: TimeInterval): string => {
-        // Use MAX_DATE as reference point instead of current date
         const endDate = new Date(MAX_DATE);
         const startDate = new Date(MAX_DATE);
         const minDate = new Date(MIN_DATE);
@@ -77,7 +110,7 @@ export default function StocksHistory() {
                 // For 5 years, use the entire available range
                 return MIN_DATE;
             default:
-                startDate.setMonth(endDate.getMonth() - 1); // Default to month
+                startDate.setMonth(endDate.getMonth() - 1);
         }
         
         // Ensure start date is not earlier than minDate
@@ -147,29 +180,65 @@ export default function StocksHistory() {
         } finally {
             setLoading(false);
         }
-    }, [symbol, selectedInterval]);
+    }, [symbol, selectedInterval, MAX_DATE]);
 
-    // When symbol or interval changes, fetch data
+    // Fetch prediction data for the selected symbol
+    const fetchPredictionData = useCallback(async () => {
+        if (!symbol) {
+            toast.error('Please select a stock symbol');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const url = `http://localhost:8000/stocks/predict/${symbol}?days=${predictionDays}`;
+            
+            const res = await fetch(url);
+            if (!res.ok) {
+                throw new Error('Failed to fetch prediction data');
+            }
+
+            const data = await res.json();
+            if (!data.predictions || data.predictions.length === 0) {
+                toast.info('No prediction data could be generated');
+                setPredictionData([]);
+            } else {
+                setPredictionData(data.predictions);
+                toast.success(`Generated ${data.predictions.length} predictions for ${symbol}`);
+            }
+        } catch (error) {
+            console.error('Error fetching prediction data:', error);
+            toast.error('Failed to generate predictions');
+            setPredictionData([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [symbol, predictionDays]);
+
+    // When symbol or interval changes, fetch appropriate data
     useEffect(() => {
         if (symbol) {
-            fetchStockData();
+            if (viewMode === 'historical') {
+                fetchStockData();
+            } else {
+                fetchPredictionData();
+            }
         }
-    }, [symbol, selectedInterval, fetchStockData]);
+    }, [symbol, selectedInterval, predictionDays, viewMode, fetchStockData, fetchPredictionData]);
 
-    // Format interval label for display
-    const formatIntervalLabel = (interval: TimeInterval): string => {
-        switch (interval) {
-            case 'week': return '1 Week';
-            case 'month': return '1 Month';
-            case 'quarter': return '3 Months';
-            case 'year': return '1 Year';
-            case '5years': return '5 Years';
-            default: return interval;
+    // When view mode changes, fetch the appropriate data
+    useEffect(() => {
+        if (symbol) {
+            if (viewMode === 'historical') {
+                fetchStockData();
+            } else {
+                fetchPredictionData();
+            }
         }
-    };
+    }, [viewMode, symbol, fetchStockData, fetchPredictionData]);
 
-    // Chart data preparation
-    const chartData = {
+    // Chart data preparation for historical view
+    const historicalChartData = {
         labels: stockData.map(item => new Date(item.timestamp).toLocaleDateString()),
         datasets: [
             {
@@ -182,8 +251,22 @@ export default function StocksHistory() {
         ]
     };
 
-    // Chart options
-    const chartOptions = {
+    // Chart data preparation for prediction view
+    const predictionChartData = {
+        labels: predictionData.map(item => new Date(item.timestamp).toLocaleDateString()),
+        datasets: [
+            {
+                label: `${symbol} Predicted Price`,
+                data: predictionData.map(item => item.predicted_close),
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                tension: 0.1
+            }
+        ]
+    };
+
+    // Historical chart options
+    const historicalChartOptions = {
         responsive: true,
         plugins: {
             legend: {
@@ -211,11 +294,40 @@ export default function StocksHistory() {
         }
     };
 
+    // Prediction chart options
+    const predictionChartOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+            title: {
+                display: true,
+                text: `${symbol || 'Stock'} Price Prediction (${formatPredictionLabel(predictionDays)}) - A-Priori Optimization`
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: false,
+                title: {
+                    display: true,
+                    text: 'Predicted Price ($)'
+                }
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Date'
+                }
+            }
+        }
+    };
+
     return (
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-2xl">Stock Price History (2013-2018)</CardTitle>
+                    <CardTitle className="text-2xl">Stock Price Analysis</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-6">
@@ -251,21 +363,52 @@ export default function StocksHistory() {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label>Time Interval</Label>
-                            <div className="flex flex-wrap gap-2">
-                                {(['week', 'month', 'quarter', 'year', '5years'] as TimeInterval[]).map((interval) => (
-                                    <Button
-                                        key={interval}
-                                        type="button"
-                                        variant={selectedInterval === interval ? "default" : "outline"}
-                                        onClick={() => setSelectedInterval(interval)}
-                                    >
-                                        {formatIntervalLabel(interval)}
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
+                        <Tabs defaultValue="historical" onValueChange={(v) => setViewMode(v as ViewMode)} className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="historical">Historical Data</TabsTrigger>
+                                <TabsTrigger value="prediction">Price Prediction</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="historical" className="mt-4">
+                                <div className="space-y-2">
+                                    <Label>Time Interval</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(['week', 'month', 'quarter', 'year', '5years'] as TimeInterval[]).map((interval) => (
+                                            <Button
+                                                key={interval}
+                                                type="button"
+                                                variant={selectedInterval === interval ? "default" : "outline"}
+                                                onClick={() => setSelectedInterval(interval)}
+                                            >
+                                                {formatIntervalLabel(interval)}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Historical data available from {MIN_DATE} to {MAX_DATE}
+                                    </p>
+                                </div>
+                            </TabsContent>
+                            <TabsContent value="prediction" className="mt-4">
+                                <div className="space-y-2">
+                                    <Label>Prediction Period</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(['7', '30', '90', '180', '365'] as PredictionInterval[]).map((days) => (
+                                            <Button
+                                                key={days}
+                                                type="button"
+                                                variant={predictionDays === days ? "default" : "outline"}
+                                                onClick={() => setPredictionDays(days)}
+                                            >
+                                                {formatPredictionLabel(days)}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Predictions are made using A-Priori Optimization based on historical patterns
+                                    </p>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
                     </div>
                 </CardContent>
             </Card>
@@ -273,55 +416,91 @@ export default function StocksHistory() {
             {loading ? (
                 <Card>
                     <CardContent className="flex justify-center items-center py-20">
-                        <div className="animate-pulse text-lg">Loading chart data...</div>
+                        <div className="animate-pulse text-lg">Loading data...</div>
                     </CardContent>
                 </Card>
-            ) : symbol && stockData.length > 0 ? (
+            ) : symbol && (viewMode === 'historical' ? stockData.length > 0 : predictionData.length > 0) ? (
                 <>
                     <Card>
                         <CardContent className="pt-6">
                             <div className="h-[400px]">
-                                <Line data={chartData} options={chartOptions} />
+                                {viewMode === 'historical' ? (
+                                    <Line data={historicalChartData} options={historicalChartOptions} />
+                                ) : (
+                                    <Line data={predictionChartData} options={predictionChartOptions} />
+                                )}
                             </div>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg">Statistical Summary</CardTitle>
+                            <CardTitle className="text-lg">
+                                {viewMode === 'historical' ? 'Statistical Summary' : 'Prediction Summary'}
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="space-y-1">
-                                    <p className="text-sm text-muted-foreground">Starting Price</p>
-                                    <p className="font-medium">${stockData[0]?.close.toFixed(2)}</p>
+                            {viewMode === 'historical' ? (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Starting Price</p>
+                                        <p className="font-medium">${stockData[0]?.close.toFixed(2)}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Ending Price</p>
+                                        <p className="font-medium">${stockData[stockData.length - 1]?.close.toFixed(2)}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Highest Price</p>
+                                        <p className="font-medium">${Math.max(...stockData.map(d => d.close)).toFixed(2)}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Lowest Price</p>
+                                        <p className="font-medium">${Math.min(...stockData.map(d => d.close)).toFixed(2)}</p>
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-sm text-muted-foreground">Current Price</p>
-                                    <p className="font-medium">${stockData[stockData.length - 1]?.close.toFixed(2)}</p>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Starting Prediction</p>
+                                        <p className="font-medium">${predictionData[0]?.predicted_close.toFixed(2)}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Final Prediction</p>
+                                        <p className="font-medium">${predictionData[predictionData.length - 1]?.predicted_close.toFixed(2)}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Highest Prediction</p>
+                                        <p className="font-medium">${Math.max(...predictionData.map(d => d.predicted_close)).toFixed(2)}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">Lowest Prediction</p>
+                                        <p className="font-medium">${Math.min(...predictionData.map(d => d.predicted_close)).toFixed(2)}</p>
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-sm text-muted-foreground">Highest Price</p>
-                                    <p className="font-medium">${Math.max(...stockData.map(d => d.close)).toFixed(2)}</p>
+                            )}
+                            {viewMode === 'prediction' && (
+                                <div className="mt-4 p-3 bg-muted rounded-md">
+                                    <p className="text-sm">
+                                        <strong>Note:</strong> These predictions are generated using A-Priori Optimization, which analyzes historical patterns to forecast future prices. Actual market performance may vary due to unforeseen events and market conditions.
+                                    </p>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-sm text-muted-foreground">Lowest Price</p>
-                                    <p className="font-medium">${Math.min(...stockData.map(d => d.close)).toFixed(2)}</p>
-                                </div>
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
                 </>
             ) : symbol ? (
                 <Card>
                     <CardContent className="py-10 text-center">
-                        <p className="text-muted-foreground">No stock data available for {symbol} in the selected time period.</p>
+                        <p className="text-muted-foreground">
+                            No {viewMode === 'historical' ? 'historical data' : 'prediction data'} available for {symbol} in the selected time period.
+                        </p>
                     </CardContent>
                 </Card>
             ) : (
                 <Card>
                     <CardContent className="py-10 text-center">
-                        <p className="text-muted-foreground">Please select a stock symbol to view its price history.</p>
+                        <p className="text-muted-foreground">Please select a stock symbol to view its data.</p>
                     </CardContent>
                 </Card>
             )}
