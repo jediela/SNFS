@@ -81,7 +81,7 @@ export default function ViewRequests() {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
     }, []);
-    
+
     useEffect(() => {
         if (user) fetchRequestsData();
     }, [user, fetchRequestsData]); // Add fetchRequestsData to the dependency array
