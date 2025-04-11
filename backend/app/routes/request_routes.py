@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
+import psycopg2
 from app.db.requests_db import (
+    get_user_id_by_username,
     send_request,
     get_received_requests,
     accept_request,
@@ -13,10 +15,17 @@ request_bp = Blueprint("request_bp", __name__, url_prefix="/requests")
 def send_friend_request():
     data = request.json
     senderId = data.get("senderId")
-    receiverId = data.get("receiverId")
+    receiverUsername = data.get("receiverUsername")
 
-    if not senderId or not receiverId:
+    if not senderId or not receiverUsername:
         return jsonify({"error": "Sender ID and Receiver ID are required"}), 400
+
+    try:
+        receiverId = get_user_id_by_username(receiverUsername)
+        if receiverId is None:
+            return jsonify({"error": f"User '{receiverUsername}' not found"}), 404
+    except psycopg2.Error as e:
+        return jsonify({"error": str(e)}), 500
 
     return send_request(senderId, receiverId)
 

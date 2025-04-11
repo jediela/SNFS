@@ -5,6 +5,19 @@ from psycopg2.extras import RealDictCursor
 from .base import get_connection
 
 
+def get_user_id_by_username(username):
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT user_id FROM Users WHERE username = %s", (username,))
+            result = cur.fetchone()
+            return result["user_id"] if result else None
+    except psycopg2.Error as e:
+        raise e
+    finally:
+        conn.close()
+
+
 def get_request_by_id(request_id):
     conn = get_connection()
     try:
