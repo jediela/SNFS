@@ -11,7 +11,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { AlertCircle, Trash2 } from 'lucide-react';
+import { AlertCircle, Trash2, Edit } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -227,19 +227,28 @@ export default function ViewStockLists() {
                                                                 </Button>
                                                             </div>
                                                         ) : (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
-                                                                onClick={() =>
-                                                                    setDeleteConfirmId(
-                                                                        list.list_id
-                                                                    )
-                                                                }
-                                                            >
-                                                                <Trash2 className="h-4 w-4 mr-1" />{' '}
-                                                                Delete
-                                                            </Button>
+                                                            <div className="flex gap-2">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => router.push(`/stocklists/edit/${list.list_id}`)}
+                                                                    className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                                                                >
+                                                                    <Edit className="h-4 w-4 mr-1" /> Edit
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                                                    onClick={() =>
+                                                                        setDeleteConfirmId(
+                                                                            list.list_id
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Trash2 className="h-4 w-4 mr-1" /> Delete
+                                                                </Button>
+                                                            </div>
                                                         )}
                                                     </>
                                                 )}
@@ -282,7 +291,6 @@ export default function ViewStockLists() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Symbol</TableHead>
-                                            <TableHead>Company</TableHead>
                                             <TableHead className="text-right">
                                                 Shares
                                             </TableHead>
@@ -295,9 +303,6 @@ export default function ViewStockLists() {
                                                     <TableCell className="font-medium">
                                                         {item.symbol}
                                                     </TableCell>
-                                                    <TableCell>
-                                                        {item.company_name}
-                                                    </TableCell>
                                                     <TableCell className="text-right">
                                                         {item.num_shares}
                                                     </TableCell>
@@ -306,7 +311,7 @@ export default function ViewStockLists() {
                                         ) : (
                                             <TableRow>
                                                 <TableCell
-                                                    colSpan={3}
+                                                    colSpan={2}
                                                     className="text-center"
                                                 >
                                                     No stocks in this list

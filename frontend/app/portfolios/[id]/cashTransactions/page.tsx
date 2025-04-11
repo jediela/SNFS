@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Table } from '@/components/ui/table';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
@@ -53,7 +53,8 @@ export default function PortfolioDetails() {
 
     const { id } = useParams();
 
-    async function fetchPortfolioData() {
+    // Use useCallback to wrap fetchPortfolioData so it can be safely included in the dependency array
+    const fetchPortfolioData = useCallback(async () => {
         if (!id || !user) return;
         setLoading(true);
         try {
@@ -75,7 +76,7 @@ export default function PortfolioDetails() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [id, user]);
 
     async function handleTransaction() {
         if (!user || !amount || !id) return;
@@ -119,9 +120,10 @@ export default function PortfolioDetails() {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
     }, []);
+    
     useEffect(() => {
         if (user) fetchPortfolioData();
-    }, [user]);
+    }, [user, fetchPortfolioData]);
 
     if (loading) {
         return (

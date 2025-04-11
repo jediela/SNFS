@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
 interface Portfolio {
@@ -21,7 +21,8 @@ export default function ViewStocks() {
         username: string;
     } | null>(null);
 
-    async function fetchPortfolioData() {
+    // Use useCallback to wrap fetchPortfolioData so it can be safely included in the dependency array
+    const fetchPortfolioData = useCallback(async () => {
         if (!id || !user) return;
         setLoading(true);
         try {
@@ -36,15 +37,16 @@ export default function ViewStocks() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [id, user]);
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
     }, []);
+    
     useEffect(() => {
         if (user) fetchPortfolioData();
-    }, [user]);
+    }, [user, fetchPortfolioData]);
 
     if (loading) {
         return (

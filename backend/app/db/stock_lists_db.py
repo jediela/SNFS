@@ -161,16 +161,138 @@ def delete_stock_list(list_id, user_id):
                     }
                 ), 403
 
-            # Delete the list (cascade delete will handle related items due to DB constraints)
+            # First explicitly delete all stock items in this list
+            cur.execute(
+                "DELETE FROM StockListItems WHERE list_id = %s",
+                (list_id,)
+            )
+            items_deleted = cur.rowcount
+            
+            # Then delete the list itself
             cur.execute(
                 "DELETE FROM StockLists WHERE list_id = %s AND user_id = %s",
                 (list_id, user_id),
             )
+            
             conn.commit()
 
             return jsonify(
-                {"message": f"Stock list {list_id} deleted successfully"}
+                {
+                    "message": f"Stock list {list_id} deleted successfully", 
+                    "items_removed": items_deleted
+                }
             ), 200
+    except psycopg2.Error as e:
+        conn.rollback()  # Add rollback to ensure atomicity
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+def get_stock_list_by_id(list_id, user_id=None):
+    """Get a single stock list by ID if the user has access to it"""
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # First check if the list exists
+            cur.execute(
+                """
+                SELECT sl.*, u.username as creator_name
+                FROM StockLists sl
+                JOIN Users u ON sl.user_id = u.user_id
+                WHERE sl.list_id = %s
+                """,
+                (list_id,),
+            )
+            stock_list = cur.fetchone()
+
+            if not stock_list:
+                return jsonify({"error": "Stock list not found"}), 404
+
+            # Check if the user has access
+            has_access = False
+
+            # Lists are accessible if they're public
+            if stock_list["visibility"] == "public":
+                has_access = True
+            # If user_id is provided, check for ownership or shared access
+            elif user_id:
+                # User owns the list
+                if stock_list["user_id"] == user_id:
+                    has_access = True
+                # List is shared with the user
+                elif stock_list["visibility"] == "shared":
+                    cur.execute(
+                        "SELECT EXISTS(SELECT 1 FROM SharedLists WHERE list_id = %s AND shared_user = %s)",
+                        (list_id, user_id),
+                    )
+                    if cur.fetchone()[0]:
+                        has_access = True
+
+            if not has_access:
+                return jsonify({"error": "You don't have access to this stock list"}), 403
+
+            # Get list items
+            cur.execute(
+                """
+                SELECT sli.*, s.company_name
+                FROM StockListItems sli
+                JOIN Stocks s ON sli.symbol = s.symbol
+                WHERE sli.list_id = %s;
+                """,
+                (list_id,),
+            )
+            items = cur.fetchall()
+            stock_list["items"] = items
+
+            return jsonify({"stockList": stock_list}), 200
+    except psycopg2.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+def update_stock_list(list_id, user_id, name, visibility):
+    """Update a stock list's name and visibility"""
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                UPDATE StockLists
+                SET name = %s, visibility = %s
+                WHERE list_id = %s AND user_id = %s
+                RETURNING *;
+                """,
+                (name, visibility, list_id, user_id),
+            )
+            updated_list = cur.fetchone()
+            
+            if not updated_list:
+                return jsonify({"error": "Failed to update stock list or not found"}), 404
+                
+            conn.commit()
+            return jsonify({"message": "Stock list updated successfully", "stockList": updated_list}), 200
+    except psycopg2.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+def remove_item_from_stock_list(list_id, symbol):
+    """Remove an item from a stock list"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM StockListItems WHERE list_id = %s AND symbol = %s",
+                (list_id, symbol),
+            )
+            if cur.rowcount == 0:
+                return jsonify({"error": f"Item with symbol {symbol} not found in list"}), 404
+                
+            conn.commit()
+            return jsonify({"message": f"Removed {symbol} from stock list"}), 200
     except psycopg2.Error as e:
         return jsonify({"error": str(e)}), 500
     finally:
