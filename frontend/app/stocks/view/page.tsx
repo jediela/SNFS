@@ -4,16 +4,30 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { 
+    Chart as ChartJS, 
+    CategoryScale, 
+    LinearScale, 
+    PointElement, 
+    LineElement, 
+    Title, 
+    Tooltip, 
+    Legend 
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+// Register ChartJS components
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend
+);
 
 interface StockPrice {
     timestamp: string;
@@ -25,29 +39,54 @@ interface StockPrice {
     symbol: string;
 }
 
-interface PaginationInfo {
-    page: number;
-    per_page: number;
-    total_items: number;
-    total_pages: number;
-}
+type TimeInterval = 'week' | 'month' | 'quarter' | 'year' | '5years';
 
-export default function StocksView() {
-    const [stocks, setStocks] = useState<StockPrice[]>([]);
+export default function StocksHistory() {
     const [symbol, setSymbol] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [page, setPage] = useState(1);
-    const PER_PAGE = 10;
-    const [pagination, setPagination] = useState<PaginationInfo>({
-        page: 1,
-        per_page: PER_PAGE,
-        total_items: 0,
-        total_pages: 1,
-    });
+    const [selectedInterval, setSelectedInterval] = useState<TimeInterval>('month');
+    const [stockData, setStockData] = useState<StockPrice[]>([]);
     const [loading, setLoading] = useState(false);
     const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
     const [symbolSearch, setSymbolSearch] = useState('');
+
+    // Fixed date bounds for stock data
+    const MIN_DATE = '2013-02-08'; // Lower bound date
+    const MAX_DATE = '2018-02-07'; // Upper bound date
+
+    // Calculate start date based on selected interval within bounds
+    const calculateStartDate = (interval: TimeInterval): string => {
+        // Use MAX_DATE as reference point instead of current date
+        const endDate = new Date(MAX_DATE);
+        const startDate = new Date(MAX_DATE);
+        const minDate = new Date(MIN_DATE);
+        
+        switch (interval) {
+            case 'week':
+                startDate.setDate(endDate.getDate() - 7);
+                break;
+            case 'month':
+                startDate.setMonth(endDate.getMonth() - 1);
+                break;
+            case 'quarter':
+                startDate.setMonth(endDate.getMonth() - 3);
+                break;
+            case 'year':
+                startDate.setFullYear(endDate.getFullYear() - 1);
+                break;
+            case '5years':
+                // For 5 years, use the entire available range
+                return MIN_DATE;
+            default:
+                startDate.setMonth(endDate.getMonth() - 1); // Default to month
+        }
+        
+        // Ensure start date is not earlier than minDate
+        if (startDate < minDate) {
+            return MIN_DATE;
+        }
+        
+        return startDate.toISOString().split('T')[0];
+    };
 
     // Fetch available symbols for autocomplete
     useEffect(() => {
@@ -71,356 +110,220 @@ export default function StocksView() {
         }
     }, [symbolSearch]);
 
-    // Use useCallback to memoize the function
-    const fetchStocks = useCallback(async (resetPage = false) => {
-        if (resetPage) {
-            setPage(1);
+    // Fetch stock data for the selected symbol and time interval
+    const fetchStockData = useCallback(async () => {
+        if (!symbol) {
+            toast.error('Please select a stock symbol');
+            return;
         }
 
         setLoading(true);
-        const currentPage = resetPage ? 1 : page;
-
         try {
-            let url = `http://localhost:8000/stocks/?page=${currentPage}&per_page=${PER_PAGE}`;
-            if (symbol) url += `&symbol=${symbol}`;
-            if (startDate) url += `&start_date=${startDate}`;
-            if (endDate) url += `&end_date=${endDate}`;
-
+            const startDate = calculateStartDate(selectedInterval);
+            
+            const url = `http://localhost:8000/stocks/?symbol=${symbol}&start_date=${startDate}&end_date=${MAX_DATE}&per_page=1000`;
+            
             const res = await fetch(url);
             if (!res.ok) {
                 throw new Error('Failed to fetch stock data');
             }
 
             const data = await res.json();
-            setStocks(data.stocks || []);
-            setPagination(
-                data.pagination || {
-                    page: currentPage,
-                    per_page: PER_PAGE,
-                    total_items: 0,
-                    total_pages: 1,
-                }
-            );
-
-            if (data.stocks?.length === 0) {
+            if (!data.stocks || data.stocks.length === 0) {
                 toast.info('No stock data found for the specified criteria');
+                setStockData([]);
+            } else {
+                // Sort by timestamp in ascending order for proper charting
+                const sortedData = [...data.stocks].sort((a, b) => 
+                    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                );
+                setStockData(sortedData);
+                toast.success(`Loaded ${sortedData.length} data points for ${symbol}`);
             }
         } catch (error) {
             console.error('Error fetching stock data:', error);
             toast.error('Failed to load stock data');
-            setStocks([]);
+            setStockData([]);
         } finally {
             setLoading(false);
         }
-    }, [page, symbol, startDate, endDate]); // Add all dependencies
+    }, [symbol, selectedInterval]);
 
-    // Initial data load
+    // When symbol or interval changes, fetch data
     useEffect(() => {
-        fetchStocks();
-    }, [page, fetchStocks]); // Add fetchStocks to the dependency array
+        if (symbol) {
+            fetchStockData();
+        }
+    }, [symbol, selectedInterval, fetchStockData]);
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        fetchStocks(true);
-    };
-
-    const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= pagination.total_pages) {
-            setPage(newPage);
+    // Format interval label for display
+    const formatIntervalLabel = (interval: TimeInterval): string => {
+        switch (interval) {
+            case 'week': return '1 Week';
+            case 'month': return '1 Month';
+            case 'quarter': return '3 Months';
+            case 'year': return '1 Year';
+            case '5years': return '5 Years';
+            default: return interval;
         }
     };
 
-    const formatNumber = (num: number) => {
-        return new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(num);
+    // Chart data preparation
+    const chartData = {
+        labels: stockData.map(item => new Date(item.timestamp).toLocaleDateString()),
+        datasets: [
+            {
+                label: `${symbol} Close Price`,
+                data: stockData.map(item => item.close),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                tension: 0.1
+            }
+        ]
     };
 
-    const formatVolume = (volume: number) => {
-        if (volume >= 1000000) {
-            return `${(volume / 1000000).toFixed(2)}M`;
-        } else if (volume >= 1000) {
-            return `${(volume / 1000).toFixed(2)}K`;
-        }
-        return volume.toString();
-    };
-
-    const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString();
-    };
-
-    // pagination rendering
-    function renderPagination() {
-        const { page, total_pages } = pagination;
-
-        // Calculate range of pages to show
-        let startPage = Math.max(1, page - 2);
-        let endPage = Math.min(total_pages, page + 2);
-
-        // Adjust to always show 5 pages when possible
-        if (endPage - startPage < 4) {
-            if (startPage === 1) {
-                endPage = Math.min(5, total_pages);
-            } else {
-                startPage = Math.max(1, endPage - 4);
+    // Chart options
+    const chartOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+            title: {
+                display: true,
+                text: `${symbol || 'Stock'} Price History (${formatIntervalLabel(selectedInterval)}) - Historical Data`
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: false,
+                title: {
+                    display: true,
+                    text: 'Price ($)'
+                }
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Date'
+                }
             }
         }
-
-        const pages = [];
-        for (let i = startPage; i <= endPage; i++) {
-            pages.push(i);
-        }
-
-        return (
-            <div className="flex items-center justify-center gap-1">
-                <button
-                    onClick={() => handlePageChange(page - 1)}
-                    disabled={page <= 1}
-                    className={`px-3 py-1 rounded border ${page <= 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
-                >
-                    Previous
-                </button>
-
-                {startPage > 1 && (
-                    <>
-                        <button
-                            onClick={() => handlePageChange(1)}
-                            className="px-3 py-1 rounded border hover:bg-gray-100"
-                        >
-                            1
-                        </button>
-                        {startPage > 2 && <span>...</span>}
-                    </>
-                )}
-
-                {pages.map((p) => (
-                    <button
-                        key={p}
-                        onClick={() => handlePageChange(p)}
-                        className={`px-3 py-1 rounded border ${p === page ? 'bg-gray-200 font-bold' : 'hover:bg-gray-100'}`}
-                    >
-                        {p}
-                    </button>
-                ))}
-
-                {endPage < total_pages && (
-                    <>
-                        {endPage < total_pages - 1 && <span>...</span>}
-                        <button
-                            onClick={() => handlePageChange(total_pages)}
-                            className="px-3 py-1 rounded border hover:bg-gray-100"
-                        >
-                            {total_pages}
-                        </button>
-                    </>
-                )}
-
-                <button
-                    onClick={() => handlePageChange(page + 1)}
-                    disabled={page >= total_pages}
-                    className={`px-3 py-1 rounded border ${page >= total_pages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
-                >
-                    Next
-                </button>
-            </div>
-        );
-    }
+    };
 
     return (
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-2xl">Stock Price Data</CardTitle>
+                    <CardTitle className="text-2xl">Stock Price History (2013-2018)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSearch} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="symbol">Stock Symbol</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="symbol"
-                                        placeholder="e.g., AAPL"
-                                        value={symbol}
-                                        onChange={(e) => {
-                                            setSymbol(
-                                                e.target.value.toUpperCase()
-                                            );
-                                            setSymbolSearch(
-                                                e.target.value.toUpperCase()
-                                            );
-                                        }}
-                                    />
-                                    {availableSymbols.length > 0 &&
-                                        symbolSearch && (
-                                            <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
-                                                {availableSymbols.map((s) => (
-                                                    <div
-                                                        key={s}
-                                                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                        onClick={() => {
-                                                            setSymbol(s);
-                                                            setSymbolSearch('');
-                                                        }}
-                                                    >
-                                                        {s}
-                                                    </div>
-                                                ))}
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="symbol">Stock Symbol</Label>
+                            <div className="relative">
+                                <Input
+                                    id="symbol"
+                                    placeholder="e.g., AAPL"
+                                    value={symbol}
+                                    onChange={(e) => {
+                                        const value = e.target.value.toUpperCase();
+                                        setSymbol(value);
+                                        setSymbolSearch(value);
+                                    }}
+                                />
+                                {availableSymbols.length > 0 && symbolSearch && (
+                                    <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                                        {availableSymbols.map((s) => (
+                                            <div
+                                                key={s}
+                                                className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                onClick={() => {
+                                                    setSymbol(s);
+                                                    setSymbolSearch('');
+                                                }}
+                                            >
+                                                {s}
                                             </div>
-                                        )}
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="startDate">Start Date</Label>
-                                <Input
-                                    id="startDate"
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) =>
-                                        setStartDate(e.target.value)
-                                    }
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="endDate">End Date</Label>
-                                <Input
-                                    id="endDate"
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-end pt-2">
-                            {/* Remove the perPage dropdown selector */}
-                            <Button type="submit" disabled={loading}>
-                                {loading ? 'Loading...' : 'Search'}
-                            </Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Symbol</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    {/* Replace Tooltip with title attribute */}
-                                    <TableHead
-                                        className="text-right"
-                                        title="First trade price of the day"
-                                    >
-                                        <div className="flex items-center justify-end">
-                                            Open{' '}
-                                            <span className="ml-1 text-gray-500 text-xs"></span>
-                                        </div>
-                                    </TableHead>
-                                    <TableHead
-                                        className="text-right"
-                                        title="Highest price of the day"
-                                    >
-                                        <div className="flex items-center justify-end">
-                                            High{' '}
-                                            <span className="ml-1 text-gray-500 text-xs"></span>
-                                        </div>
-                                    </TableHead>
-                                    <TableHead
-                                        className="text-right"
-                                        title="Lowest price of the day"
-                                    >
-                                        <div className="flex items-center justify-end">
-                                            Low{' '}
-                                            <span className="ml-1 text-gray-500 text-xs"></span>
-                                        </div>
-                                    </TableHead>
-                                    <TableHead
-                                        className="text-right"
-                                        title="Last trade price of the day"
-                                    >
-                                        <div className="flex items-center justify-end">
-                                            Close{' '}
-                                            <span className="ml-1 text-gray-500 text-xs"></span>
-                                        </div>
-                                    </TableHead>
-                                    <TableHead
-                                        className="text-right"
-                                        title="Total shares traded"
-                                    >
-                                        <div className="flex items-center justify-end">
-                                            Volume{' '}
-                                            <span className="ml-1 text-gray-500 text-xs"></span>
-                                        </div>
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {loading ? (
-                                    Array.from({ length: 5 }).map((_, i) => (
-                                        <TableRow key={i}>
-                                            {Array.from({ length: 7 }).map(
-                                                (_, j) => (
-                                                    <TableCell key={j}>
-                                                        <div className="h-6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
-                                                    </TableCell>
-                                                )
-                                            )}
-                                        </TableRow>
-                                    ))
-                                ) : stocks && stocks.length > 0 ? (
-                                    stocks.map((stock, index) => (
-                                        <TableRow
-                                            key={`${stock.symbol}-${stock.timestamp}-${index}`}
-                                        >
-                                            <TableCell className="font-medium">
-                                                {stock.symbol}
-                                            </TableCell>
-                                            <TableCell>
-                                                {formatDate(stock.timestamp)}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {formatNumber(stock.open)}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {formatNumber(stock.high)}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {formatNumber(stock.low)}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {formatNumber(stock.close)}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {formatVolume(stock.volume)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell
-                                            colSpan={7}
-                                            className="text-center py-10"
-                                        >
-                                            No stock data found
-                                        </TableCell>
-                                    </TableRow>
+                                        ))}
+                                    </div>
                                 )}
-                            </TableBody>
-                        </Table>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Time Interval</Label>
+                            <div className="flex flex-wrap gap-2">
+                                {(['week', 'month', 'quarter', 'year', '5years'] as TimeInterval[]).map((interval) => (
+                                    <Button
+                                        key={interval}
+                                        type="button"
+                                        variant={selectedInterval === interval ? "default" : "outline"}
+                                        onClick={() => setSelectedInterval(interval)}
+                                    >
+                                        {formatIntervalLabel(interval)}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Always show pagination if there's more than one page */}
-            {pagination.total_pages > 1 && (
-                <div className="flex justify-center mt-6">
-                    {renderPagination()}
-                </div>
+            {loading ? (
+                <Card>
+                    <CardContent className="flex justify-center items-center py-20">
+                        <div className="animate-pulse text-lg">Loading chart data...</div>
+                    </CardContent>
+                </Card>
+            ) : symbol && stockData.length > 0 ? (
+                <>
+                    <Card>
+                        <CardContent className="pt-6">
+                            <div className="h-[400px]">
+                                <Line data={chartData} options={chartOptions} />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Statistical Summary</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Starting Price</p>
+                                    <p className="font-medium">${stockData[0]?.close.toFixed(2)}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Current Price</p>
+                                    <p className="font-medium">${stockData[stockData.length - 1]?.close.toFixed(2)}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Highest Price</p>
+                                    <p className="font-medium">${Math.max(...stockData.map(d => d.close)).toFixed(2)}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">Lowest Price</p>
+                                    <p className="font-medium">${Math.min(...stockData.map(d => d.close)).toFixed(2)}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </>
+            ) : symbol ? (
+                <Card>
+                    <CardContent className="py-10 text-center">
+                        <p className="text-muted-foreground">No stock data available for {symbol} in the selected time period.</p>
+                    </CardContent>
+                </Card>
+            ) : (
+                <Card>
+                    <CardContent className="py-10 text-center">
+                        <p className="text-muted-foreground">Please select a stock symbol to view its price history.</p>
+                    </CardContent>
+                </Card>
             )}
         </div>
     );
