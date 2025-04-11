@@ -214,7 +214,7 @@ def predict_stock_prices(symbol, days_to_predict=30):
             prices = [float(item['close']) for item in historical_data]
             dates = [item['timestamp'] for item in historical_data]
             
-            # Enhanced A-Priori Optimization algorithm
+            # A-Priori Optimization algorithm
             if len(prices) < 20:
                 return jsonify({"error": "Insufficient data for prediction"}), 400
                 

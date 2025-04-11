@@ -78,11 +78,11 @@ export default function Navbar() {
                             </>
                         ) : (
                             <div className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                                Logged in as:{' '}
+                                Logged in as:
                                 <span className="font-bold">
                                     {user.username}
-                                </span>{' '}
-                                | id:{' '}
+                                </span>
+                                | id:
                                 <span className="font-bold">
                                     {user.user_id}
                                 </span>
@@ -105,7 +105,7 @@ export default function Navbar() {
                     <MenubarTrigger>Stocks</MenubarTrigger>
                     <MenubarContent>
                         <MenubarItem asChild>
-                            <Link href="/stocks/view">View & Predict Stocks</Link>
+                            <Link href="/stocks/view">View Stocks</Link>
                         </MenubarItem>
                     </MenubarContent>
                 </MenubarMenu>
