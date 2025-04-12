@@ -382,20 +382,29 @@ def get_stocklist_statistics(list_id, user_id, start_date=None, end_date=None):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # 1. Validate access: list must be owned, shared, or public
-            cur.execute("""
-                SELECT 1
-                FROM StockLists sl
-                LEFT JOIN SharedLists sh ON sl.list_id = sh.list_id AND sh.shared_user = %s
-                WHERE sl.list_id = %s AND (
-                    sl.user_id = %s OR sl.visibility = 'public' OR sh.shared_user = %s
-                )
-            """, (user_id, list_id, user_id, user_id))
+            # Check access (owned, shared, or public)
+            if user_id is not None:
+                cur.execute("""
+                    SELECT 1
+                    FROM StockLists sl
+                    LEFT JOIN SharedLists sh ON sl.list_id = sh.list_id AND sh.shared_user = %s
+                    WHERE sl.list_id = %s AND (
+                        sl.visibility = 'public'
+                        OR sl.user_id = %s
+                        OR sh.shared_user = %s
+                    )
+                """, (user_id, list_id, user_id, user_id))
+            else:
+                cur.execute("""
+                    SELECT 1
+                    FROM StockLists
+                    WHERE list_id = %s AND visibility = 'public'
+                """, (list_id,))
             
             if not cur.fetchone():
                 return jsonify({"error": "Stock list not found or access denied"}), 403
 
-            # 2. Fetch stock list items
+            # Fetch stock list items
             cur.execute("""
                 SELECT symbol, num_shares
                 FROM StockListItems
@@ -408,7 +417,7 @@ def get_stocklist_statistics(list_id, user_id, start_date=None, end_date=None):
 
             symbols = [h['symbol'] for h in holdings]
 
-            # 3. Determine date range
+            # Determine date range
             if not end_date:
                 end_date = datetime.now().strftime('%Y-%m-%d')
             if not start_date:
@@ -423,7 +432,7 @@ def get_stocklist_statistics(list_id, user_id, start_date=None, end_date=None):
 
             symbols_str = "','".join(symbols)
 
-            # 4. Daily return stats
+            # Daily return stats
             cur.execute(f"""
                 WITH daily_prices AS (
                     SELECT 

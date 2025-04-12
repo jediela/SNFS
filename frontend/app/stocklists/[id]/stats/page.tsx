@@ -54,16 +54,17 @@ export default function StockListStatsPage() {
     const { id } = params;
 
     useEffect(() => {
-        const fetchStatistics = async () => {
+        async function fetchStatistics() {
             const storedUser = localStorage.getItem('user');
-            if (!storedUser || !id) return;
+            const user = storedUser ? JSON.parse(storedUser) : null;
 
-            const user = JSON.parse(storedUser);
+            const query = user?.user_id ? `?user_id=${user.user_id}` : '';
 
             try {
                 const res = await fetch(
-                    `http://localhost:8000/stocklists/${id}/statistics?user_id=${user.user_id}`
+                    `http://localhost:8000/stocklists/${id}/statistics${query}`
                 );
+
                 const data = await res.json();
 
                 if (!res.ok) {
@@ -76,7 +77,7 @@ export default function StockListStatsPage() {
                 console.error('Error fetching statistics:', err);
                 toast.error('Failed to load statistics');
             }
-        };
+        }
 
         fetchStatistics();
     }, [id]);

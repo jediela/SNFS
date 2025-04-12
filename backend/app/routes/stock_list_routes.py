@@ -170,11 +170,4 @@ def view_stocklist_statistics(list_id):
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
 
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
-    try:
-        user_id = int(user_id)
-    except ValueError:
-        return jsonify({"error": "Invalid User ID"}), 400
-
     return get_stocklist_statistics(list_id, user_id, start_date, end_date)
