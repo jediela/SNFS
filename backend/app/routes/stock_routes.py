@@ -1,18 +1,18 @@
 from flask import Blueprint, request, jsonify
-from app.db.stock_db import create_stock_table, load_stock_csv, get_stock_data, get_stock_symbols, predict_stock_prices, add_custom_stock_data
-from datetime import datetime, timedelta
+from app.db.stock_db import load_stock_csv, get_stock_data, get_stock_symbols, predict_stock_prices, add_custom_stock_data
+from datetime import datetime
+from psycopg2.extras import RealDictCursor
+from app.db.base import get_connection
 
 stock_bp = Blueprint("stock_bp", __name__, url_prefix="/stocks")
 
 @stock_bp.route("/load", methods=["POST"])
 def load_stocks():
-    """Load stock data from CSV into database"""
     result = load_stock_csv()
     return jsonify(result)
 
 @stock_bp.route("/", methods=["GET"])
 def get_stocks():
-    """Get stock data with filtering and pagination"""
     symbol = request.args.get("symbol", "")
     start_date = request.args.get("start_date", "")
     end_date = request.args.get("end_date", "")
@@ -23,7 +23,6 @@ def get_stocks():
 
 @stock_bp.route("/symbols", methods=["GET"])
 def list_symbols():
-    """Get list of available stock symbols"""
     search = request.args.get("search", "")
     limit = int(request.args.get("limit", 100))
     
@@ -31,7 +30,6 @@ def list_symbols():
 
 @stock_bp.route("/predict/<symbol>", methods=["GET"])
 def predict_stock_future(symbol):
-    """Predict future prices for a given stock symbol"""
     days = request.args.get("days", 30, type=int)
     
     if not symbol:
@@ -44,15 +42,12 @@ def predict_stock_future(symbol):
 
 @stock_bp.route("/add", methods=["POST"])
 def add_stock_data():
-    """Add custom stock price data"""
     data = request.json
-    
     user_id = data.get("user_id")
     symbol = data.get("symbol")
     timestamp = data.get("timestamp")
     close = data.get("close")
     volume = data.get("volume")
-    
     open_price = data.get("open")
     high = data.get("high")
     low = data.get("low")
@@ -78,14 +73,9 @@ def add_stock_data():
 
 @stock_bp.route("/current-price/<symbol>", methods=["GET"])
 def get_current_price(symbol):
-    """Get the most recent price for a stock symbol"""
-    from psycopg2.extras import RealDictCursor
-    from app.db.base import get_connection
-    
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Get the most recent price
             cur.execute(
                 "SELECT * FROM StockPrices WHERE symbol = %s ORDER BY timestamp DESC LIMIT 1",
                 (symbol.upper(),)

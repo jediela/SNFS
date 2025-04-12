@@ -37,7 +37,7 @@ def create_list():
 def add_item():
     data = request.json
     list_id = data.get("list_id")
-    user_id = data.get("user_id")  # Added to verify ownership
+    user_id = data.get("user_id")
     symbol = data.get("symbol")
     num_shares = data.get("num_shares")
 
@@ -46,7 +46,6 @@ def add_item():
             {"error": "List ID, symbol, and number of shares are required"}
         ), 400
 
-    # Verify the user owns this list if user_id is provided
     if user_id and not verify_user_owns_list(user_id, list_id):
         return jsonify({"error": "You don't have permission to modify this list"}), 403
 
@@ -55,11 +54,9 @@ def add_item():
 
 @stock_list_bp.route("/lists", methods=["GET"])
 def get_lists():
-    # Get optional parameters
     user_id = request.args.get("user_id")
     search = request.args.get("search")
 
-    # Convert user_id to int if it exists
     if user_id:
         try:
             user_id = int(user_id)
@@ -69,7 +66,6 @@ def get_lists():
     return get_accessible_stock_lists(user_id, search)
 
 
-# Keep the old endpoint for backward compatibility
 @stock_list_bp.route("/user/<int:user_id>", methods=["GET"])
 def get_lists_for_user(user_id):
     search = request.args.get("search")
@@ -91,7 +87,6 @@ def delete_list(list_id):
 def get_list_by_id(list_id):
     user_id = request.args.get("user_id")
     
-    # Convert user_id to int if it exists
     if user_id:
         try:
             user_id = int(user_id)
@@ -114,7 +109,6 @@ def update_list(list_id):
     if visibility not in ["private", "shared", "public"]:
         return jsonify({"error": "Visibility must be private, shared, or public"}), 400
 
-    # Verify the user owns this list
     if not verify_user_owns_list(user_id, list_id):
         return jsonify({"error": "You don't have permission to modify this list"}), 403
 
@@ -131,7 +125,6 @@ def remove_item():
     if not list_id or not user_id or not symbol:
         return jsonify({"error": "List ID, user ID, and symbol are required"}), 400
 
-    # Verify the user owns this list
     if not verify_user_owns_list(user_id, list_id):
         return jsonify({"error": "You don't have permission to modify this list"}), 403
 

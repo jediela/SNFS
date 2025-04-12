@@ -39,19 +39,12 @@ def view_portfolio_by_id_route(portfolio_id):
     if not user_id:
         return jsonify({"error": "User ID is required"}), 400
 
-    try:
-        user_id = int(user_id)
-    except ValueError:
-        return jsonify({"error": "Invalid User ID"}), 400
-
     return get_portfolio_by_id(portfolio_id, user_id)
 
 
 @portfolio_bp.route("/stock-transaction", methods=["POST"])
 def stock_transaction():
-    """Execute a buy or sell transaction for a stock in a portfolio"""
     data = request.json
-    
     portfolio_id = data.get("portfolio_id")
     user_id = data.get("user_id")
     symbol = data.get("symbol")
@@ -64,14 +57,6 @@ def stock_transaction():
             "error": "Missing required fields: portfolio_id, user_id, symbol, transaction_type, num_shares, price_per_share"
         }), 400
         
-    try:
-        portfolio_id = int(portfolio_id)
-        user_id = int(user_id)
-        num_shares = int(num_shares)
-        price_per_share = float(price_per_share)
-    except ValueError:
-        return jsonify({"error": "Invalid numeric values"}), 400
-        
     return handle_stock_transaction(
         portfolio_id, symbol.upper(), transaction_type,
         num_shares, price_per_share, user_id
@@ -80,50 +65,32 @@ def stock_transaction():
 
 @portfolio_bp.route("/<int:portfolio_id>/stock-transactions", methods=["GET"])
 def get_stock_transactions(portfolio_id):
-    """Get all stock transactions for a portfolio"""
     user_id = request.args.get("user_id")
     
     if not user_id:
         return jsonify({"error": "User ID is required"}), 400
-        
-    try:
-        user_id = int(user_id)
-    except ValueError:
-        return jsonify({"error": "Invalid user ID"}), 400
         
     return get_portfolio_stock_transactions(portfolio_id, user_id)
 
 
 @portfolio_bp.route("/<int:portfolio_id>/holdings", methods=["GET"])
 def get_portfolio_holdings(portfolio_id):
-    """Get all stock holdings for a portfolio"""
     user_id = request.args.get("user_id")
     
     if not user_id:
         return jsonify({"error": "User ID is required"}), 400
-        
-    try:
-        user_id = int(user_id)
-    except ValueError:
-        return jsonify({"error": "Invalid user ID"}), 400
         
     return get_stock_holdings(portfolio_id, user_id)
 
 
 @portfolio_bp.route("/<int:portfolio_id>/statistics", methods=["GET"])
 def get_statistics(portfolio_id):
-    """Get statistical analysis of portfolio holdings"""
     user_id = request.args.get("user_id")
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
     
     if not user_id:
         return jsonify({"error": "User ID is required"}), 400
-        
-    try:
-        user_id = int(user_id)
-    except ValueError:
-        return jsonify({"error": "Invalid user ID"}), 400
         
     return get_portfolio_statistics(portfolio_id, user_id, start_date, end_date)
 

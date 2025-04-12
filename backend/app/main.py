@@ -19,40 +19,36 @@ def load_stocks():
     return jsonify(result)
 
 
-# Check if stock data exists and load it if needed
+# Load stock data
 def ensure_stock_data_loaded():
-    # Only load if no data exists
     if not check_stock_data_exists():
         print("Loading stock data from CSV file...")
         result = load_stock_csv()
         print(f"Stock data loading result: {result}")
         return "Stock data loaded"
     else:
-        print("Stock data already exists, skipping import")
         return "Stock data already exists"
 
 
-# Create a route to trigger data loading
+# Route to trigger data loading
 @app.route("/ensure-stock-data", methods=["GET"])
 def trigger_data_load():
     message = ensure_stock_data_loaded()
     return message
 
 
-# Set an environment variable to indicate this is the first run
+# Environment variable to indicate first run
 first_run = os.environ.get('FIRST_RUN', 'true').lower() == 'true'
 
 if first_run:
-    # Create a background thread to load data after a delay
     def delayed_data_load():
-        time.sleep(5)  # Wait for database to be ready
+        time.sleep(5)
         ensure_stock_data_loaded()
     
     thread = threading.Thread(target=delayed_data_load)
     thread.daemon = True
     thread.start()
     
-    # Set the environment variable so we don't load again on restart
     os.environ['FIRST_RUN'] = 'false'
 
 
