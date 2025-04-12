@@ -18,7 +18,7 @@ def send_friend_request():
     receiverUsername = data.get("receiverUsername")
 
     if not senderId or not receiverUsername:
-        return jsonify({"error": "Sender ID and Receiver ID are required"}), 400
+        return jsonify({"error": "Sender ID and Receiver Username are required"}), 400
 
     try:
         receiverId = get_user_id_by_username(receiverUsername)
