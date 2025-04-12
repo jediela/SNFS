@@ -23,11 +23,10 @@ import {
 } from '@/components/ui/table';
 import { Trash2, Plus } from 'lucide-react';
 
-// Define an interface for stocks in a list
 interface StockItem {
     symbol: string;
     shares: number;
-    id: string; // Temporary ID for UI management
+    id: string;
 }
 
 export default function CreateStockList() {
@@ -45,7 +44,6 @@ export default function CreateStockList() {
     const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
     const [symbolSearch, setSymbolSearch] = useState('');
 
-    // Check for logged in user on component mount
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -56,7 +54,6 @@ export default function CreateStockList() {
         }
     }, [router]);
 
-    // Fetch available symbols for autocomplete
     useEffect(() => {
         async function fetchSymbols() {
             if (!symbolSearch) return;
@@ -78,7 +75,6 @@ export default function CreateStockList() {
         fetchSymbols();
     }, [symbolSearch]);
 
-    // Add stock to temporary list
     const addStockToTemp = () => {
         if (!symbol) {
             toast.error('Please enter a stock symbol');
@@ -90,37 +86,32 @@ export default function CreateStockList() {
             return;
         }
 
-        // Check for duplicate symbol
         const duplicateIndex = tempStocks.findIndex(
             (stock) => stock.symbol.toUpperCase() === symbol.toUpperCase()
         );
 
         if (duplicateIndex >= 0) {
-            // Update shares for existing symbol
             const updatedStocks = [...tempStocks];
             updatedStocks[duplicateIndex].shares = parseInt(shares);
             setTempStocks(updatedStocks);
             toast.success(`Updated shares for ${symbol}`);
         } else {
-            // Add new stock
             setTempStocks([
                 ...tempStocks,
                 {
                     symbol: symbol.toUpperCase(),
                     shares: parseInt(shares),
-                    id: Date.now().toString(), // Simple unique ID
+                    id: Date.now().toString(),
                 },
             ]);
             toast.success(`Added ${shares} shares of ${symbol}`);
         }
 
-        // Clear inputs
         setSymbol('');
         setShares('');
         setAvailableSymbols([]);
     };
 
-    // Remove stock from temporary list
     const removeStock = (id: string) => {
         setTempStocks(tempStocks.filter((stock) => stock.id !== id));
     };
@@ -142,7 +133,6 @@ export default function CreateStockList() {
         setIsSubmitting(true);
 
         try {
-            // First create the list
             const res = await fetch('http://localhost:8000/stocklists/create', {
                 method: 'POST',
                 headers: {
@@ -162,7 +152,6 @@ export default function CreateStockList() {
 
             const listId = data.stockList.list_id;
 
-            // Now add all stocks to the list
             for (const stock of tempStocks) {
                 const itemRes = await fetch(
                     'http://localhost:8000/stocklists/add_item',
@@ -192,7 +181,6 @@ export default function CreateStockList() {
                 description: `Created "${name}" with ${tempStocks.length} stocks`,
             });
 
-            // Navigate to view page
             router.push('/stocklists/view');
         } catch (error) {
             toast.error(String(error));

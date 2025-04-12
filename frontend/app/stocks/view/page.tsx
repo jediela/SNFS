@@ -20,7 +20,6 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
-// Register ChartJS components
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -51,7 +50,6 @@ type TimeInterval = 'week' | 'month' | 'quarter' | 'year' | '5years';
 type PredictionInterval = '7' | '30' | '90' | '180' | '365';
 type ViewMode = 'historical' | 'prediction';
 
-// Inner component that uses useSearchParams
 function StockViewContent() {
     const formatIntervalLabel = (interval: TimeInterval): string => {
         switch (interval) {
@@ -101,7 +99,6 @@ function StockViewContent() {
 
     const searchParams = useSearchParams();
 
-    // Check for symbol in URL params (for direct linking)
     useEffect(() => {
         const symbolFromUrl = searchParams?.get('symbol');
         if (symbolFromUrl && !symbol) {
@@ -109,11 +106,10 @@ function StockViewContent() {
         }
     }, [searchParams, symbol]);
 
-    // Fixed date bounds for stock data
-    const MIN_DATE = '2013-02-08'; // Lower bound date
-    const MAX_DATE = '2018-02-07'; // Upper bound date
+    // Date constants
+    const MIN_DATE = '2013-02-08';
+    const MAX_DATE = '2018-02-07';
 
-    // Calculate start date based on selected interval within bounds
     const calculateStartDate = (interval: TimeInterval): string => {
         const endDate = new Date(MAX_DATE);
         const startDate = new Date(MAX_DATE);
@@ -133,13 +129,11 @@ function StockViewContent() {
                 startDate.setFullYear(endDate.getFullYear() - 1);
                 break;
             case '5years':
-                // For 5 years, use the entire available range
                 return MIN_DATE;
             default:
                 startDate.setMonth(endDate.getMonth() - 1);
         }
 
-        // Ensure start date is not earlier than minDate
         if (startDate < minDate) {
             return MIN_DATE;
         }
@@ -147,7 +141,7 @@ function StockViewContent() {
         return startDate.toISOString().split('T')[0];
     };
 
-    // Fetch available symbols for autocomplete
+    // Available symbols for autocomplete
     useEffect(() => {
         async function fetchSymbols() {
             try {
@@ -169,7 +163,7 @@ function StockViewContent() {
         }
     }, [symbolSearch]);
 
-    // Fetch stock data for the selected symbol and time interval
+    // Stock data for the selected symbol and time interval
     const fetchStockData = useCallback(async () => {
         if (!symbol) {
             toast.error('Please select a stock symbol');
@@ -192,7 +186,7 @@ function StockViewContent() {
                 toast.info('No stock data found for the specified criteria');
                 setStockData([]);
             } else {
-                // Sort by timestamp in ascending order for proper charting
+                // Sort by timestamp in ascending order
                 const sortedData = [...data.stocks].sort(
                     (a, b) =>
                         new Date(a.timestamp).getTime() -
@@ -203,8 +197,7 @@ function StockViewContent() {
                     `Loaded ${sortedData.length} data points for ${symbol}`
                 );
             }
-        } catch (error) {
-            console.error('Error fetching stock data:', error);
+        } catch {
             toast.error('Failed to load stock data');
             setStockData([]);
         } finally {
@@ -212,7 +205,7 @@ function StockViewContent() {
         }
     }, [symbol, selectedInterval, MAX_DATE]);
 
-    // Fetch prediction data for the selected symbol
+    // Prediction data for the selected symbol
     const fetchPredictionData = useCallback(async () => {
         if (!symbol) {
             toast.error('Please select a stock symbol');
@@ -238,8 +231,7 @@ function StockViewContent() {
                     `Generated ${data.predictions.length} predictions for ${symbol}`
                 );
             }
-        } catch (error) {
-            console.error('Error fetching prediction data:', error);
+        } catch {
             toast.error('Failed to generate predictions');
             setPredictionData([]);
         } finally {
@@ -247,7 +239,6 @@ function StockViewContent() {
         }
     }, [symbol, predictionDays]);
 
-    // When symbol or interval changes, fetch appropriate data
     useEffect(() => {
         if (symbol) {
             if (viewMode === 'historical') {
@@ -265,7 +256,6 @@ function StockViewContent() {
         fetchPredictionData,
     ]);
 
-    // When view mode changes, fetch the appropriate data
     useEffect(() => {
         if (symbol) {
             if (viewMode === 'historical') {
@@ -276,7 +266,6 @@ function StockViewContent() {
         }
     }, [viewMode, symbol, fetchStockData, fetchPredictionData]);
 
-    // Chart data preparation for historical view
     const historicalChartData = {
         labels: stockData.map((item) =>
             new Date(item.timestamp).toLocaleDateString()
@@ -292,7 +281,6 @@ function StockViewContent() {
         ],
     };
 
-    // Chart data preparation for prediction view
     const predictionChartData = {
         labels: predictionData.map((item) =>
             new Date(item.timestamp).toLocaleDateString()
@@ -679,7 +667,6 @@ function StockViewContent() {
     );
 }
 
-// Main component that wraps the inner component with Suspense
 export default function StocksHistory() {
     return (
         <Suspense

@@ -61,7 +61,6 @@ function ReviewsContent() {
                 return;
             }
 
-            // Skip if we're already loading or have fetched this list before in this session
             const cacheKey = `list-${id}-${user?.user_id || 'guest'}`;
             if (isLoadingRef.current || fetchedListsRef.current.has(cacheKey)) {
                 return;
@@ -82,7 +81,6 @@ function ReviewsContent() {
                     return;
                 }
 
-                // Ensure reviews is always an array, even if the API returns null
                 const reviewsArray = Array.isArray(data.reviews)
                     ? data.reviews
                     : [];
@@ -92,7 +90,6 @@ function ReviewsContent() {
                 setViewMode('list');
                 fetchedListsRef.current.add(cacheKey);
 
-                // Only show info toast on manual searches, not initial load
                 if (initialLoadDoneRef.current && reviewsArray.length === 0) {
                     toast.info('No reviews found for this stock list');
                 }
@@ -132,7 +129,6 @@ function ReviewsContent() {
                 return;
             }
 
-            // Ensure reviews is always an array
             const reviewsArray = Array.isArray(data.reviews)
                 ? data.reviews
                 : [];
@@ -141,7 +137,6 @@ function ReviewsContent() {
             setViewMode('user');
             fetchedListsRef.current.add(cacheKey);
 
-            // Only show info toast on manual actions, not initial load
             if (initialLoadDoneRef.current && reviewsArray.length === 0) {
                 toast.info('You have not written any reviews yet');
             }
@@ -155,7 +150,6 @@ function ReviewsContent() {
         }
     }, []);
 
-    // Use a separate effect for the initial data load
     useEffect(() => {
         if (!initialRenderRef.current) return;
 
@@ -164,7 +158,6 @@ function ReviewsContent() {
             setUser(JSON.parse(storedUser));
         }
 
-        // Check if we have a list_id in the URL
         const listIdParam = searchParams.get('list_id');
         if (listIdParam) {
             setListId(listIdParam);
@@ -186,12 +179,10 @@ function ReviewsContent() {
 
     function handleSearch(e: React.FormEvent) {
         e.preventDefault();
-        // Clear the cache before a manual search
         fetchedListsRef.current.clear();
         fetchReviewsForList();
     }
 
-    // Reset the cache when switching views
     function handleViewModeSwitch(userId: number) {
         fetchedListsRef.current.clear();
         setViewMode('user');
@@ -210,7 +201,6 @@ function ReviewsContent() {
         }
     }
 
-    // Add function to handle review deletion
     async function handleDeleteReview(reviewId: number) {
         if (!user) return;
 
@@ -238,7 +228,6 @@ function ReviewsContent() {
 
             toast.success('Review deleted successfully');
 
-            // Remove the deleted review from the local state
             setReviews((prevReviews) =>
                 prevReviews.filter((review) => review.review_id !== reviewId)
             );
@@ -250,19 +239,16 @@ function ReviewsContent() {
         }
     }
 
-    // Add function to handle starting edit mode
     function handleStartEdit(review: Review) {
         setEditReviewId(review.review_id);
         setEditedContent(review.content);
     }
 
-    // Add function to handle canceling edit
     function handleCancelEdit() {
         setEditReviewId(null);
         setEditedContent('');
     }
 
-    // Add function to handle submitting edited review
     async function handleSubmitEdit(reviewId: number) {
         if (!user || !editedContent.trim()) return;
 
@@ -291,7 +277,6 @@ function ReviewsContent() {
 
             toast.success('Review updated successfully');
 
-            // Update the review in the local state
             setReviews((prevReviews) =>
                 prevReviews.map((review) =>
                     review.review_id === reviewId
@@ -413,7 +398,7 @@ function ReviewsContent() {
                                             </div>
                                         )}
 
-                                        {/* Show edit/delete buttons only for user's own reviews */}
+                                        {/* Edit/delete buttons (for users own reviews) */}
                                         {user &&
                                             user.user_id === review.user_id && (
                                                 <>

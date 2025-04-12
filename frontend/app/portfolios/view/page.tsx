@@ -64,7 +64,6 @@ export default function ViewPortfolio() {
             );
             const data = await res.json();
 
-            // Ensure all portfolios have numeric balance values
             if (data.portfolios) {
                 const parsedPortfolios = data.portfolios.map(
                     (portfolio: PortfolioData) => ({

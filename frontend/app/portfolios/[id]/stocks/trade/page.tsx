@@ -273,7 +273,6 @@ export default function TradeStocks() {
         }
     }
 
-    // Navigate to stock view page with pre-selected symbol
     const viewStockHistory = (symbol: string) => {
         router.push(`/stocks/view?symbol=${symbol}`);
     };

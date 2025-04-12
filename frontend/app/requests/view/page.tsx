@@ -26,7 +26,6 @@ export default function ViewRequests() {
         }[]
     >([]);
 
-    // Use useCallback to memoize the function
     const fetchRequestsData = useCallback(async () => {
         if (!user) return;
         try {
@@ -39,7 +38,7 @@ export default function ViewRequests() {
         } catch {
             toast.error('Failed to refresh requests');
         }
-    }, [user]); // Add user as dependency
+    }, [user]);
 
     async function handleAccept(requestId: string) {
         const res = await fetch(
@@ -84,7 +83,7 @@ export default function ViewRequests() {
 
     useEffect(() => {
         if (user) fetchRequestsData();
-    }, [user, fetchRequestsData]); // Add fetchRequestsData to the dependency array
+    }, [user, fetchRequestsData]);
 
     return (
         <div className="grid w-full gap-2 p-4 max-w-4xl mx-auto">

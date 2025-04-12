@@ -29,7 +29,7 @@ interface StockListItem {
     num_shares: number;
     company_name: string;
     list_id: number;
-    id?: string; // For new items that haven't been saved yet
+    id?: string;
 }
 
 interface StockList {
@@ -61,7 +61,6 @@ export default function EditStockList() {
     } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Check for logged in user on component mount
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -95,7 +94,6 @@ export default function EditStockList() {
                     return;
                 }
 
-                // Check if the user owns the list
                 if (data.stockList.user_id !== user?.user_id) {
                     toast.error('You can only edit your own stock lists');
                     router.push('/stocklists/view');
@@ -105,9 +103,8 @@ export default function EditStockList() {
                 setStockList(data.stockList);
                 setName(data.stockList.name);
                 setVisibility(data.stockList.visibility);
-            } catch (error) {
+            } catch {
                 toast.error('An error occurred while loading the stock list');
-                console.error(error);
             } finally {
                 setLoading(false);
             }
@@ -116,7 +113,6 @@ export default function EditStockList() {
         fetchStockList();
     }, [user, id, router]);
 
-    // Fetch available symbols for autocomplete
     useEffect(() => {
         async function fetchSymbols() {
             if (!symbolSearch) return;
@@ -130,15 +126,14 @@ export default function EditStockList() {
                 }
                 const data = await res.json();
                 setAvailableSymbols(data.symbols || []);
-            } catch (error) {
-                console.error('Error fetching symbols:', error);
+            } catch {
+                toast.error('Error fetching symbols:');
             }
         }
 
         fetchSymbols();
     }, [symbolSearch]);
 
-    // Add stock to the list
     const addStock = async () => {
         if (!stockList || !user || !symbol || !shares) {
             toast.error('Please enter both symbol and number of shares');
@@ -179,7 +174,6 @@ export default function EditStockList() {
 
             toast.success(`Added ${numShares} shares of ${symbol}`);
 
-            // Update the local list with the new item including company name (if available)
             const updatedList = { ...stockList };
             updatedList.items = [
                 ...updatedList.items,
@@ -197,15 +191,13 @@ export default function EditStockList() {
             setSymbol('');
             setShares('');
             setAvailableSymbols([]);
-        } catch (error) {
+        } catch {
             toast.error('An error occurred while adding the stock');
-            console.error(error);
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    // Remove stock from the list
     const removeStock = async (stockSymbol: string) => {
         if (!stockList || !user) return;
 
@@ -234,20 +226,17 @@ export default function EditStockList() {
 
             toast.success(`Removed ${stockSymbol} from list`);
 
-            // Update local state to remove the item
             const updatedList = { ...stockList };
             updatedList.items = updatedList.items.filter(
                 (item) => item.symbol !== stockSymbol
             );
 
             setStockList(updatedList);
-        } catch (error) {
+        } catch {
             toast.error('An error occurred while removing the stock');
-            console.error(error);
         }
     };
 
-    // Update list name and visibility
     const updateListDetails = async () => {
         if (!stockList || !user || !name) {
             toast.error('Please provide a name for the list');
@@ -279,7 +268,6 @@ export default function EditStockList() {
 
             toast.success('Stock list details updated');
 
-            // Update local state
             setStockList({
                 ...stockList,
                 name,

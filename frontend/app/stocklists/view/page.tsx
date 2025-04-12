@@ -41,11 +41,9 @@ export default function ViewStockLists() {
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
     const router = useRouter();
 
-    // Define fetchStockLists with useCallback
     const fetchStockLists = useCallback(
         async (uid: number | null = null) => {
             try {
-                // Build the URL with query parameters
                 let url = 'http://localhost:8000/stocklists/lists';
                 const params = new URLSearchParams();
 
@@ -85,17 +83,14 @@ export default function ViewStockLists() {
         [searchTerm]
     );
 
-    // Check for logged in user on component mount
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             const user = JSON.parse(storedUser);
             setUserId(user.user_id.toString());
             setIsLoggedIn(true);
-            // Auto load stock lists for logged in users
             fetchStockLists(user.user_id);
         } else {
-            // Load only public lists if no user is logged in
             fetchStockLists();
         }
     }, [fetchStockLists]);
@@ -130,7 +125,6 @@ export default function ViewStockLists() {
 
             toast.success(data.message);
 
-            // Remove the deleted list from the state
             setStockLists((prev) =>
                 prev.filter((list) => list.list_id !== listId)
             );
@@ -191,7 +185,7 @@ export default function ViewStockLists() {
                                                 | Visibility: {list.visibility}
                                             </p>
 
-                                            {/* Delete button - only show for owned lists */}
+                                            {/* Delete button (only show for owned lists) */}
                                             {isLoggedIn &&
                                                 list.access_type ===
                                                     'owned' && (
