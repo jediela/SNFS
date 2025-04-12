@@ -75,3 +75,28 @@ def add_stock_data():
         close=close,
         volume=volume
     )
+
+@stock_bp.route("/current-price/<symbol>", methods=["GET"])
+def get_current_price(symbol):
+    """Get the most recent price for a stock symbol"""
+    from psycopg2.extras import RealDictCursor
+    from app.db.base import get_connection
+    
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get the most recent price
+            cur.execute(
+                "SELECT * FROM StockPrices WHERE symbol = %s ORDER BY timestamp DESC LIMIT 1",
+                (symbol.upper(),)
+            )
+            price_data = cur.fetchone()
+            
+            if not price_data:
+                return jsonify({"error": f"No price data available for {symbol}"}), 404
+                
+            return jsonify({"price_data": price_data}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()

@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 interface CashTransaction {
     transaction_id: number;
     type: 'deposit' | 'withdrawal';
-    amount: string;
+    amount: string | number;
     timestamp: string;
 }
 
@@ -34,6 +34,13 @@ interface Portfolio {
     portfolio_id: number;
     name: string;
     balance: number;
+}
+
+interface TransactionData {
+    transaction_id: number;
+    type: string;
+    amount: string | number;
+    timestamp: string;
 }
 
 export default function PortfolioDetails() {
@@ -53,7 +60,6 @@ export default function PortfolioDetails() {
 
     const { id } = useParams();
 
-    // Use useCallback to wrap fetchPortfolioData so it can be safely included in the dependency array
     const fetchPortfolioData = useCallback(async () => {
         if (!id || !user) return;
         setLoading(true);
@@ -63,16 +69,32 @@ export default function PortfolioDetails() {
                 { method: 'GET' }
             );
             const transactionsData = await transactionsRes.json();
-            setTransactions(transactionsData.transactions);
+
+            // Ensure numeric values are properly parsed
+            if (transactionsData.transactions) {
+                const parsedTransactions = transactionsData.transactions.map((txn: TransactionData) => ({
+                    ...txn,
+                    amount: typeof txn.amount === 'string' ? Number(txn.amount) : txn.amount
+                }));
+                setTransactions(parsedTransactions);
+            } else {
+                setTransactions([]);
+            }
 
             const portfolioRes = await fetch(
                 `http://localhost:8000/portfolios/${id}?userId=${user.user_id}`,
                 { method: 'GET' }
             );
             const portfolioData = await portfolioRes.json();
-            setPortfolio(portfolioData.portfolio);
-        } catch {
+
+            // Ensure balance is a number
+            if (portfolioData.portfolio) {
+                portfolioData.portfolio.balance = Number(portfolioData.portfolio.balance);
+                setPortfolio(portfolioData.portfolio);
+            }
+        } catch (error) {
             toast.error('Failed to fetch data');
+            console.error(error);
         } finally {
             setLoading(false);
         }
@@ -138,6 +160,9 @@ export default function PortfolioDetails() {
         );
     }
 
+    // Ensure balance is always a number
+    const portfolioBalance = portfolio?.balance ? Number(portfolio.balance) : 0;
+
     return (
         <div className="p-6">
             <Button
@@ -154,7 +179,7 @@ export default function PortfolioDetails() {
             {/* Balance Display */}
             <div className="mb-8 p-4 bg-card rounded-lg shadow">
                 <h2 className="text-xl font-semibold mb-2">Current Balance</h2>
-                <p className="text-2xl">${portfolio?.balance}</p>
+                <p className="text-2xl">${portfolioBalance.toFixed(2)}</p>
             </div>
 
             {/* Transaction Action Buttons */}
@@ -229,7 +254,7 @@ export default function PortfolioDetails() {
                                                 : 'text-red-500'
                                         }
                                     >
-                                        ${transaction.amount}
+                                        ${Number(transaction.amount).toFixed(2)}
                                     </TableCell>
                                     <TableCell>
                                         {new Date(
