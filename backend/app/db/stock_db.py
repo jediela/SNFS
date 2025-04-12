@@ -1,6 +1,7 @@
 from flask import jsonify
 from psycopg2.extras import RealDictCursor
 from .base import get_connection
+from datetime import datetime, timedelta
 
 def create_stock_table():
     """Create the StockPrices table if it doesn't exist"""
@@ -100,9 +101,9 @@ def get_stock_data(symbol="", start_date="", end_date="", page=1, per_page=20):
             params = []
             
             if symbol:
-                query += " AND symbol ILIKE %s"
-                count_query += " AND symbol ILIKE %s"
-                params.append(f"%{symbol}%")
+                query += " AND symbol = %s"
+                count_query += " AND symbol = %s"
+                params.append(symbol)
                 
             if start_date:
                 query += " AND timestamp >= %s"
@@ -125,8 +126,8 @@ def get_stock_data(symbol="", start_date="", end_date="", page=1, per_page=20):
                     ORDER BY volume DESC
                 """
             else:
-                # Order by timestamp (most recent first) and symbol
-                query += " ORDER BY timestamp DESC, symbol ASC"
+                # Order by timestamp (ascending) for charts
+                query += " ORDER BY timestamp ASC, symbol ASC"
             
             # Add pagination
             query += " LIMIT %s OFFSET %s"
@@ -183,6 +184,177 @@ def get_stock_symbols(search="", limit=100):
             
             return jsonify({"symbols": symbols})
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+def predict_stock_prices(symbol, days_to_predict=30):
+    """Predict future stock prices using A-Priori Optimization"""
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get historical data for the specified symbol
+            # Order by date ascending to get proper time series
+            cur.execute(
+                """
+                SELECT timestamp, close 
+                FROM StockPrices 
+                WHERE symbol = %s
+                ORDER BY timestamp ASC
+                """, 
+                (symbol,)
+            )
+            
+            historical_data = cur.fetchall()
+            
+            if not historical_data:
+                return jsonify({"error": f"No historical data found for {symbol}"}), 404
+            
+            # Extract close prices for prediction
+            prices = [float(item['close']) for item in historical_data]
+            dates = [item['timestamp'] for item in historical_data]
+            
+            # A-Priori Optimization algorithm
+            if len(prices) < 20:
+                return jsonify({"error": "Insufficient data for prediction"}), 400
+                
+            # Calculate statistical properties for more realistic predictions
+            mean_price = sum(prices) / len(prices)
+            last_price = prices[-1]
+            
+            # Calculate historical volatility (standard deviation of returns)
+            returns = [prices[i]/prices[i-1] - 1 for i in range(1, len(prices))]
+            mean_return = sum(returns) / len(returns)
+            volatility = (sum((r - mean_return) ** 2 for r in returns) / len(returns)) ** 0.5
+            
+            # Mean reversion factor - stronger for more volatile stocks
+            gamma = min(0.3, volatility * 2)
+            
+            # Calculate trend based on recent data (last 5-10 days)
+            lookback = min(10, len(prices) - 1)
+            short_term_trend = (prices[-1] - prices[-lookback]) / lookback
+            
+            # Calculate long-term trend for stability
+            long_term_trend = (prices[-1] - prices[0]) / (len(prices) - 1) 
+            
+            # Blend short and long term trends based on volatility
+            # More volatile stocks rely more on mean reversion than trend
+            trend_weight = max(0.3, 1.0 - volatility * 3)
+            trend = trend_weight * short_term_trend + (1 - trend_weight) * long_term_trend
+            
+            # Ensure minimal trend if close to zero (avoid complete flatline)
+            if abs(trend) < 0.001 * last_price:
+                trend = (0.001 * last_price) * (1 if trend >= 0 else -1)
+            
+            # Generate predictions
+            last_date = dates[-1]
+            predictions = []
+            current_price = last_price
+            
+            # Import random for adding noise
+            import random
+            # Use combination of symbol and days to ensure consistent predictions for same parameters
+            random.seed(hash(symbol) + days_to_predict)
+            
+            for i in range(1, days_to_predict + 1):
+                # Apply mean reversion effect (stronger for more extreme prices)
+                deviation_from_mean = (current_price - mean_price) / mean_price
+                mean_reversion = gamma * mean_price * deviation_from_mean * abs(deviation_from_mean)
+                
+                # Calculate next price with volatility-scaled noise
+                noise_scale = volatility * current_price * 0.5
+                noise = random.normalvariate(0, noise_scale)
+                
+                # Combine factors to predict next price
+                next_price = current_price + trend - mean_reversion + noise
+                
+                # Ensure price doesn't go negative
+                next_price = max(0.01, next_price)
+                
+                # Dampen extreme moves based on historical volatility
+                max_daily_move = max(0.1, volatility * 2) * current_price
+                if next_price > current_price + max_daily_move:
+                    next_price = current_price + max_daily_move
+                elif next_price < current_price - max_daily_move:
+                    next_price = current_price - max_daily_move
+                
+                # Update price for next iteration
+                current_price = next_price
+                
+                # Slightly adjust trend with each step to avoid straight lines
+                trend = 0.95 * trend + 0.05 * mean_return * current_price
+                
+                # Calculate the next date
+                next_date = (datetime.strptime(str(last_date), '%Y-%m-%d') + 
+                            timedelta(days=i)).strftime('%Y-%m-%d')
+                
+                predictions.append({
+                    "timestamp": next_date,
+                    "predicted_close": round(next_price, 2),
+                    "symbol": symbol
+                })
+            
+            return jsonify({
+                "symbol": symbol,
+                "predictions": predictions,
+                "method": "A-Priori Optimization with Mean Reversion and Volatility Scaling"
+            })
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+def add_custom_stock_data(user_id, symbol, timestamp, open_price, high, low, close, volume):
+    """Add or update custom stock price data"""
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # First check if this entry already exists
+            cur.execute(
+                "SELECT * FROM StockPrices WHERE symbol = %s AND timestamp = %s",
+                (symbol, timestamp)
+            )
+            existing_entry = cur.fetchone()
+            
+            if existing_entry:
+                # Update existing entry
+                cur.execute(
+                    """
+                    UPDATE StockPrices 
+                    SET open = %s, high = %s, low = %s, close = %s, volume = %s
+                    WHERE symbol = %s AND timestamp = %s
+                    RETURNING *
+                    """,
+                    (open_price, high, low, close, volume, symbol, timestamp)
+                )
+                updated_entry = cur.fetchone()
+                conn.commit()
+                
+                return jsonify({
+                    "message": "Stock data updated successfully",
+                    "data": updated_entry
+                }), 200
+            else:
+                # Insert new entry
+                cur.execute(
+                    """
+                    INSERT INTO StockPrices (symbol, timestamp, open, high, low, close, volume)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    RETURNING *
+                    """,
+                    (symbol, timestamp, open_price, high, low, close, volume)
+                )
+                new_entry = cur.fetchone()
+                conn.commit()
+                
+                return jsonify({
+                    "message": "Stock data added successfully",
+                    "data": new_entry
+                }), 201
+    
+    except Exception as e:
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()

@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Table } from '@/components/ui/table';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 interface CashTransaction {
     transaction_id: number;
     type: 'deposit' | 'withdrawal';
-    amount: string;
+    amount: string | number;
     timestamp: string;
 }
 
@@ -34,6 +34,13 @@ interface Portfolio {
     portfolio_id: number;
     name: string;
     balance: number;
+}
+
+interface TransactionData {
+    transaction_id: number;
+    type: string;
+    amount: string | number;
+    timestamp: string;
 }
 
 export default function PortfolioDetails() {
@@ -53,7 +60,7 @@ export default function PortfolioDetails() {
 
     const { id } = useParams();
 
-    async function fetchPortfolioData() {
+    const fetchPortfolioData = useCallback(async () => {
         if (!id || !user) return;
         setLoading(true);
         try {
@@ -62,20 +69,43 @@ export default function PortfolioDetails() {
                 { method: 'GET' }
             );
             const transactionsData = await transactionsRes.json();
-            setTransactions(transactionsData.transactions);
+
+            // Ensure numeric values are properly parsed
+            if (transactionsData.transactions) {
+                const parsedTransactions = transactionsData.transactions.map(
+                    (txn: TransactionData) => ({
+                        ...txn,
+                        amount:
+                            typeof txn.amount === 'string'
+                                ? Number(txn.amount)
+                                : txn.amount,
+                    })
+                );
+                setTransactions(parsedTransactions);
+            } else {
+                setTransactions([]);
+            }
 
             const portfolioRes = await fetch(
                 `http://localhost:8000/portfolios/${id}?userId=${user.user_id}`,
                 { method: 'GET' }
             );
             const portfolioData = await portfolioRes.json();
-            setPortfolio(portfolioData.portfolio);
-        } catch {
+
+            // Ensure balance is a number
+            if (portfolioData.portfolio) {
+                portfolioData.portfolio.balance = Number(
+                    portfolioData.portfolio.balance
+                );
+                setPortfolio(portfolioData.portfolio);
+            }
+        } catch (error) {
             toast.error('Failed to fetch data');
+            console.error(error);
         } finally {
             setLoading(false);
         }
-    }
+    }, [id, user]);
 
     async function handleTransaction() {
         if (!user || !amount || !id) return;
@@ -105,7 +135,6 @@ export default function PortfolioDetails() {
             const result = await response.json();
             toast.success(result.message || 'Transaction successful');
 
-            // Optional: refetch data to reflect balance and transactions
             fetchPortfolioData();
             setOpenDialog(false);
             setAmount('');
@@ -119,9 +148,10 @@ export default function PortfolioDetails() {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
     }, []);
+
     useEffect(() => {
         if (user) fetchPortfolioData();
-    }, [user]);
+    }, [user, fetchPortfolioData]);
 
     if (loading) {
         return (
@@ -135,6 +165,9 @@ export default function PortfolioDetails() {
             </div>
         );
     }
+
+    // Ensure balance is always a number
+    const portfolioBalance = portfolio?.balance ? Number(portfolio.balance) : 0;
 
     return (
         <div className="p-6">
@@ -152,7 +185,7 @@ export default function PortfolioDetails() {
             {/* Balance Display */}
             <div className="mb-8 p-4 bg-card rounded-lg shadow">
                 <h2 className="text-xl font-semibold mb-2">Current Balance</h2>
-                <p className="text-2xl">${portfolio?.balance}</p>
+                <p className="text-2xl">${portfolioBalance.toFixed(2)}</p>
             </div>
 
             {/* Transaction Action Buttons */}
@@ -227,7 +260,7 @@ export default function PortfolioDetails() {
                                                 : 'text-red-500'
                                         }
                                     >
-                                        ${transaction.amount}
+                                        ${Number(transaction.amount).toFixed(2)}
                                     </TableCell>
                                     <TableCell>
                                         {new Date(

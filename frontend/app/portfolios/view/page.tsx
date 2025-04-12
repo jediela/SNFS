@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
     Card,
     CardContent,
@@ -12,22 +12,29 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
+interface Portfolio {
+    portfolio_id: string;
+    owner_id: string;
+    name: string;
+    balance: number;
+}
+
+interface PortfolioData {
+    portfolio_id: string;
+    owner_id: string;
+    name: string;
+    balance: number | string;
+}
+
 export default function ViewPortfolio() {
     const [user, setUser] = useState<{
         user_id: number;
         username: string;
     } | null>(null);
-    const [portfolios, setPortfolios] = useState<
-        {
-            portfolio_id: string;
-            owner_id: string;
-            name: string;
-            balance: number;
-        }[]
-    >([]);
+    const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
     const router = useRouter();
 
-    async function fetchPortfolios() {
+    const fetchPortfolios = useCallback(async () => {
         if (!user) return;
         try {
             const res = await fetch(
@@ -35,20 +42,33 @@ export default function ViewPortfolio() {
                 { method: 'GET' }
             );
             const data = await res.json();
-            setPortfolios(data.portfolios || []);
+
+            // Ensure all portfolios have numeric balance values
+            if (data.portfolios) {
+                const parsedPortfolios = data.portfolios.map(
+                    (portfolio: PortfolioData) => ({
+                        ...portfolio,
+                        balance: Number(portfolio.balance),
+                    })
+                );
+                setPortfolios(parsedPortfolios);
+            } else {
+                setPortfolios([]);
+            }
         } catch {
             toast.error('Failed to refresh portfolios');
             setPortfolios([]);
         }
-    }
+    }, [user]);
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
     }, []);
+
     useEffect(() => {
         if (user) fetchPortfolios();
-    }, [user]);
+    }, [user, fetchPortfolios]);
 
     function handleViewCashTransactions(portfolioId: string) {
         router.push(`/portfolios/${portfolioId}/cashTransactions`);
@@ -72,7 +92,10 @@ export default function ViewPortfolio() {
                                 <CardTitle>{portfolio.name}</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p>Balance: ${portfolio.balance}</p>
+                                <p>
+                                    Balance: $
+                                    {Number(portfolio.balance).toFixed(2)}
+                                </p>
                             </CardContent>
                             <CardFooter className="flex flex-col items-start gap-2">
                                 <Button
