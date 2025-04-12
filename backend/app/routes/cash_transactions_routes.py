@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify
 from app.db.cash_transactions_db import handle_cash_transaction, get_cash_transactions
 
-cash_transactions_bp = Blueprint("cash_transactions_bp", __name__, url_prefix="/transactions")
+cash_transactions_bp = Blueprint(
+    "cash_transactions_bp", __name__, url_prefix="/transactions"
+)
+
 
 @cash_transactions_bp.route("/", methods=["POST"])
 def create_transaction():
@@ -14,6 +17,7 @@ def create_transaction():
         return jsonify({"error": "Missing required fields"}), 400
 
     return handle_cash_transaction(portfolio_id, transaction_type, amount)
+
 
 @cash_transactions_bp.route("/<int:portfolio_id>", methods=["GET"])
 def get_transactions(portfolio_id):

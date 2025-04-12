@@ -1,7 +1,7 @@
 from flask import jsonify
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from  .portfolios_db import create_portfolio
+from .portfolios_db import create_portfolio
 from .base import get_connection
 
 
@@ -20,11 +20,27 @@ def register_user(username, password):
             try:
                 portfolio = create_portfolio(user["user_id"], "Portfolio 1")
                 if portfolio:
-                    return jsonify({"message": "User registered & default portfolio created", "user": user}), 201
+                    return jsonify(
+                        {
+                            "message": "User registered & default portfolio created",
+                            "user": user,
+                        }
+                    ), 201
                 else:
-                    return jsonify({"message": "User registered but portfolio creation failed", "user": user}), 201
+                    return jsonify(
+                        {
+                            "message": "User registered but portfolio creation failed",
+                            "user": user,
+                        }
+                    ), 201
             except Exception as e:
-                return jsonify({"message": "User registered but portfolio creation failed", "user": user, "error": str(e)}), 201
+                return jsonify(
+                    {
+                        "message": "User registered but portfolio creation failed",
+                        "user": user,
+                        "error": str(e),
+                    }
+                ), 201
         else:
             return jsonify({"error": "User registration failed"}), 500
     except psycopg2.Error as e:

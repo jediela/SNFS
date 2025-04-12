@@ -46,42 +46,56 @@ def send_request(senderId, receiverId):
             senderId = int(senderId)
             receiverId = int(receiverId)
             user1, user2 = sorted([senderId, receiverId])
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT 1 FROM Friends
                 WHERE user1_id = %s AND user2_id = %s;
-            """, (user1, user2))
+            """,
+                (user1, user2),
+            )
             if cur.fetchone():
                 return jsonify({"error": "You are already friends"}), 400
 
             # Check for existing pending request
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT 1 FROM FriendRequests
                 WHERE ((from_user_id = %s AND to_user_id = %s)
                     OR (from_user_id = %s AND to_user_id = %s))
                 AND status = 'pending';
-            """, (senderId, receiverId, receiverId, senderId))
+            """,
+                (senderId, receiverId, receiverId, senderId),
+            )
             if cur.fetchone():
                 return jsonify({"error": "A friend request is already pending"}), 400
 
             # Check for recently rejected/deleted request
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT status, timestamp FROM FriendRequests
                 WHERE ((from_user_id = %s AND to_user_id = %s)
                     OR (from_user_id = %s AND to_user_id = %s))
                 ORDER BY timestamp DESC
                 LIMIT 1;
-            """, (senderId, receiverId, receiverId, senderId))
+            """,
+                (senderId, receiverId, receiverId, senderId),
+            )
             recent = cur.fetchone()
             if recent and recent["status"] in ["rejected", "deleted"]:
                 time_diff = datetime.utcnow() - recent["timestamp"]
                 if time_diff.total_seconds() < 300:
-                    return jsonify({"error": "Please wait 5 minutes before re-sending the request"}), 400
+                    return jsonify(
+                        {"error": "Please wait 5 minutes before re-sending the request"}
+                    ), 400
 
             # Create request
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO FriendRequests (from_user_id, to_user_id, status)
                 VALUES (%s, %s, 'pending') RETURNING *;
-            """, (senderId, receiverId))
+            """,
+                (senderId, receiverId),
+            )
             request = cur.fetchone()
 
         conn.commit()
@@ -97,28 +111,36 @@ def accept_request(request_id):
     try:
         request = get_request_by_id(request_id)
         if not request:
-            return jsonify({"error": "Friend request not found or already processed"}), 404
-        
+            return jsonify(
+                {"error": "Friend request not found or already processed"}
+            ), 404
+
         from_id = request["from_user_id"]
         to_id = request["to_user_id"]
         user1, user2 = sorted([from_id, to_id])
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # Update request status
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE FriendRequests
                 SET status = 'accepted'
                 WHERE request_id = %s
                 RETURNING *;
-            """, (request_id,))
+            """,
+                (request_id,),
+            )
             updated_request = cur.fetchone()
-            
+
             # Insert into Friends
-            cur.execute("""
+            cur.execute(
+                """
                 INSERT INTO Friends (user1_id, user2_id)
                 VALUES (%s, %s)
                 ON CONFLICT (user1_id, user2_id) DO NOTHING;
-            """, (user1, user2))
+            """,
+                (user1, user2),
+            )
 
         conn.commit()
         return jsonify({"message": "Request accepted", "request": updated_request}), 200

@@ -11,7 +11,7 @@ from app.db.stock_lists_db import (
     get_stock_list_by_id,
     update_stock_list,
     remove_item_from_stock_list,
-    get_user_id_by_username
+    get_user_id_by_username,
 )
 
 stock_list_bp = Blueprint("stock_list_bp", __name__, url_prefix="/stocklists")
@@ -86,13 +86,13 @@ def delete_list(list_id):
 @stock_list_bp.route("/list/<int:list_id>", methods=["GET"])
 def get_list_by_id(list_id):
     user_id = request.args.get("user_id")
-    
+
     if user_id:
         try:
             user_id = int(user_id)
         except ValueError:
             return jsonify({"error": "Invalid user ID format"}), 400
-    
+
     return get_stock_list_by_id(list_id, user_id)
 
 
@@ -140,6 +140,7 @@ def get_user_lists():
 
     return get_user_stock_lists(user_id)
 
+
 @stock_list_bp.route("/share", methods=["POST"])
 def share_list():
     data = request.json
@@ -153,7 +154,7 @@ def share_list():
 
     if not share_to_id:
         return jsonify({"error": f"User '{username}' not found"}), 404
-    
+
     return share_stock_list(owner_id, list_id, share_to_id)
 
 

@@ -38,18 +38,19 @@ def trigger_data_load():
 
 
 # Environment variable to indicate first run
-first_run = os.environ.get('FIRST_RUN', 'true').lower() == 'true'
+first_run = os.environ.get("FIRST_RUN", "true").lower() == "true"
 
 if first_run:
+
     def delayed_data_load():
         time.sleep(5)
         ensure_stock_data_loaded()
-    
+
     thread = threading.Thread(target=delayed_data_load)
     thread.daemon = True
     thread.start()
-    
-    os.environ['FIRST_RUN'] = 'false'
+
+    os.environ["FIRST_RUN"] = "false"
 
 
 if __name__ == "__main__":

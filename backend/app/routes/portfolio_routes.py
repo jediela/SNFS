@@ -1,10 +1,15 @@
 from flask import Blueprint, request, jsonify
-from app.db.portfolios_db import create_portfolio, transfer_funds, view_user_portfolios, get_portfolio_by_id
+from app.db.portfolios_db import (
+    create_portfolio,
+    transfer_funds,
+    view_user_portfolios,
+    get_portfolio_by_id,
+)
 from app.db.stock_transactions_db import (
-    handle_stock_transaction, 
-    get_portfolio_stock_transactions, 
+    handle_stock_transaction,
+    get_portfolio_stock_transactions,
     get_stock_holdings,
-    get_portfolio_statistics
+    get_portfolio_statistics,
 )
 
 portfolio_bp = Blueprint("portfolio_bp", __name__, url_prefix="/portfolios")
@@ -51,35 +56,43 @@ def stock_transaction():
     transaction_type = data.get("transaction_type")
     num_shares = data.get("num_shares")
     price_per_share = data.get("price_per_share")
-    
-    if not all([portfolio_id, user_id, symbol, transaction_type, num_shares, price_per_share]):
-        return jsonify({
-            "error": "Missing required fields: portfolio_id, user_id, symbol, transaction_type, num_shares, price_per_share"
-        }), 400
-        
+
+    if not all(
+        [portfolio_id, user_id, symbol, transaction_type, num_shares, price_per_share]
+    ):
+        return jsonify(
+            {
+                "error": "Missing required fields: portfolio_id, user_id, symbol, transaction_type, num_shares, price_per_share"
+            }
+        ), 400
+
     return handle_stock_transaction(
-        portfolio_id, symbol.upper(), transaction_type,
-        num_shares, price_per_share, user_id
+        portfolio_id,
+        symbol.upper(),
+        transaction_type,
+        num_shares,
+        price_per_share,
+        user_id,
     )
 
 
 @portfolio_bp.route("/<int:portfolio_id>/stock-transactions", methods=["GET"])
 def get_stock_transactions(portfolio_id):
     user_id = request.args.get("user_id")
-    
+
     if not user_id:
         return jsonify({"error": "User ID is required"}), 400
-        
+
     return get_portfolio_stock_transactions(portfolio_id, user_id)
 
 
 @portfolio_bp.route("/<int:portfolio_id>/holdings", methods=["GET"])
 def get_portfolio_holdings(portfolio_id):
     user_id = request.args.get("user_id")
-    
+
     if not user_id:
         return jsonify({"error": "User ID is required"}), 400
-        
+
     return get_stock_holdings(portfolio_id, user_id)
 
 
@@ -88,10 +101,10 @@ def get_statistics(portfolio_id):
     user_id = request.args.get("user_id")
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
-    
+
     if not user_id:
         return jsonify({"error": "User ID is required"}), 400
-        
+
     return get_portfolio_statistics(portfolio_id, user_id, start_date, end_date)
 
 
@@ -103,6 +116,8 @@ def transfer_between_portfolios():
     amount = data.get("amount")
 
     if not all([from_id, to_id, amount]):
-        return jsonify({"error": "Missing required fields: fromPortfolioId, toPortfolioId, amount"}), 400
+        return jsonify(
+            {"error": "Missing required fields: fromPortfolioId, toPortfolioId, amount"}
+        ), 400
 
     return transfer_funds(from_id, to_id, amount)
