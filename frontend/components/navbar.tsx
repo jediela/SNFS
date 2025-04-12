@@ -99,6 +99,9 @@ export default function Navbar() {
                         <MenubarItem asChild>
                             <Link href="/stocklists/view">View Lists</Link>
                         </MenubarItem>
+                        <MenubarItem asChild>
+                            <Link href="/stocklists/all">My Lists</Link>
+                        </MenubarItem>
                     </MenubarContent>
                 </MenubarMenu>
                 <MenubarMenu>
@@ -120,6 +123,14 @@ export default function Navbar() {
                         </MenubarItem>
                         <MenubarItem asChild>
                             <Link href="/requests/send">Send Request</Link>
+                        </MenubarItem>
+                    </MenubarContent>
+                </MenubarMenu>
+                <MenubarMenu>
+                    <MenubarTrigger>Friends</MenubarTrigger>
+                    <MenubarContent>
+                        <MenubarItem asChild>
+                            <Link href="/friends">My Friends</Link>
                         </MenubarItem>
                     </MenubarContent>
                 </MenubarMenu>

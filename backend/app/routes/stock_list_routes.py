@@ -3,11 +3,14 @@ from app.db.stock_lists_db import (
     create_stock_list,
     add_item_to_stock_list,
     get_accessible_stock_lists,
+    get_user_stock_lists,
+    share_stock_list,
     verify_user_owns_list,
     delete_stock_list,
     get_stock_list_by_id,
     update_stock_list,
     remove_item_from_stock_list,
+    get_user_id_by_username
 )
 
 stock_list_bp = Blueprint("stock_list_bp", __name__, url_prefix="/stocklists")
@@ -132,3 +135,29 @@ def remove_item():
         return jsonify({"error": "You don't have permission to modify this list"}), 403
 
     return remove_item_from_stock_list(list_id, symbol)
+
+
+@stock_list_bp.route("/mine", methods=["GET"])
+def get_user_lists():
+    user_id = request.args.get("userId")
+
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+
+    return get_user_stock_lists(user_id)
+
+@stock_list_bp.route("/share", methods=["POST"])
+def share_list():
+    data = request.json
+    username = data.get("username")
+    list_id = data.get("listId")
+    owner_id = data.get("ownerId")
+
+    if not username or not list_id or not owner_id:
+        return jsonify({"error": "Username, List Id, and Owner Id are required"}), 400
+    share_to_id = get_user_id_by_username(username)
+
+    if not share_to_id:
+        return jsonify({"error": f"User '{username}' not found"}), 404
+    
+    return share_stock_list(owner_id, list_id, share_to_id)

@@ -44,17 +44,17 @@ interface StockList {
 export default function EditStockList() {
     const router = useRouter();
     const { id } = useParams();
-    
+
     const [stockList, setStockList] = useState<StockList | null>(null);
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState('');
     const [visibility, setVisibility] = useState('private');
-    
+
     const [symbol, setSymbol] = useState('');
     const [shares, setShares] = useState('');
     const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
     const [symbolSearch, setSymbolSearch] = useState('');
-    
+
     const [user, setUser] = useState<{
         user_id: number;
         username: string;
@@ -120,7 +120,7 @@ export default function EditStockList() {
     useEffect(() => {
         async function fetchSymbols() {
             if (!symbolSearch) return;
-            
+
             try {
                 const res = await fetch(
                     `http://localhost:8000/stocks/symbols?search=${symbolSearch}&limit=20`
@@ -154,18 +154,21 @@ export default function EditStockList() {
         setIsSubmitting(true);
 
         try {
-            const res = await fetch('http://localhost:8000/stocklists/add_item', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_id: user.user_id,
-                    list_id: stockList.list_id,
-                    symbol: symbol.toUpperCase(),
-                    num_shares: numShares,
-                }),
-            });
+            const res = await fetch(
+                'http://localhost:8000/stocklists/add_item',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: user.user_id,
+                        list_id: stockList.list_id,
+                        symbol: symbol.toUpperCase(),
+                        num_shares: numShares,
+                    }),
+                }
+            );
 
             const data = await res.json();
 
@@ -175,7 +178,7 @@ export default function EditStockList() {
             }
 
             toast.success(`Added ${numShares} shares of ${symbol}`);
-            
+
             // Update the local list with the new item including company name (if available)
             const updatedList = { ...stockList };
             updatedList.items = [
@@ -183,16 +186,17 @@ export default function EditStockList() {
                 {
                     symbol: symbol.toUpperCase(),
                     num_shares: numShares,
-                    company_name: data.item.company_name || `Company ${symbol.toUpperCase()}`,
-                    list_id: stockList.list_id
-                }
+                    company_name:
+                        data.item.company_name ||
+                        `Company ${symbol.toUpperCase()}`,
+                    list_id: stockList.list_id,
+                },
             ];
-            
+
             setStockList(updatedList);
             setSymbol('');
             setShares('');
             setAvailableSymbols([]);
-
         } catch (error) {
             toast.error('An error occurred while adding the stock');
             console.error(error);
@@ -206,17 +210,20 @@ export default function EditStockList() {
         if (!stockList || !user) return;
 
         try {
-            const res = await fetch(`http://localhost:8000/stocklists/remove_item`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_id: user.user_id,
-                    list_id: stockList.list_id,
-                    symbol: stockSymbol,
-                }),
-            });
+            const res = await fetch(
+                `http://localhost:8000/stocklists/remove_item`,
+                {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: user.user_id,
+                        list_id: stockList.list_id,
+                        symbol: stockSymbol,
+                    }),
+                }
+            );
 
             const data = await res.json();
 
@@ -226,15 +233,14 @@ export default function EditStockList() {
             }
 
             toast.success(`Removed ${stockSymbol} from list`);
-            
+
             // Update local state to remove the item
             const updatedList = { ...stockList };
             updatedList.items = updatedList.items.filter(
                 (item) => item.symbol !== stockSymbol
             );
-            
-            setStockList(updatedList);
 
+            setStockList(updatedList);
         } catch (error) {
             toast.error('An error occurred while removing the stock');
             console.error(error);
@@ -249,17 +255,20 @@ export default function EditStockList() {
         }
 
         try {
-            const res = await fetch(`http://localhost:8000/stocklists/update/${stockList.list_id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_id: user.user_id,
-                    name,
-                    visibility,
-                }),
-            });
+            const res = await fetch(
+                `http://localhost:8000/stocklists/update/${stockList.list_id}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: user.user_id,
+                        name,
+                        visibility,
+                    }),
+                }
+            );
 
             const data = await res.json();
 
@@ -269,14 +278,13 @@ export default function EditStockList() {
             }
 
             toast.success('Stock list details updated');
-            
+
             // Update local state
             setStockList({
                 ...stockList,
                 name,
                 visibility,
             });
-
         } catch (error) {
             toast.error('An error occurred while updating the list');
             console.error(error);
@@ -307,7 +315,8 @@ export default function EditStockList() {
                 <CardHeader>
                     <CardTitle>Stock List Not Found</CardTitle>
                     <CardDescription>
-                        The stock list you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to view it.
+                        The stock list you&apos;re looking for doesn&apos;t
+                        exist or you don&apos;t have permission to view it.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -332,7 +341,10 @@ export default function EditStockList() {
                                 Update your stock list details and manage stocks
                             </CardDescription>
                         </div>
-                        <Button variant="outline" onClick={() => router.push('/stocklists/view')}>
+                        <Button
+                            variant="outline"
+                            onClick={() => router.push('/stocklists/view')}
+                        >
                             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Lists
                         </Button>
                     </div>
@@ -364,45 +376,51 @@ export default function EditStockList() {
                                 </select>
                             </div>
                         </div>
-                        
+
                         <Button onClick={updateListDetails}>
                             Update List Details
                         </Button>
 
                         {/* Add stocks to the list */}
                         <div className="border rounded-md p-4 mt-6">
-                            <h3 className="text-lg font-medium mb-4">Add Stocks</h3>
-                            
+                            <h3 className="text-lg font-medium mb-4">
+                                Add Stocks
+                            </h3>
+
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="relative">
                                     <Label>Stock Symbol</Label>
                                     <Input
                                         value={symbol}
                                         onChange={(e) => {
-                                            const value = e.target.value.toUpperCase();
+                                            const value =
+                                                e.target.value.toUpperCase();
                                             setSymbol(value);
                                             setSymbolSearch(value);
                                         }}
                                         placeholder="e.g., AAPL"
                                         className="mt-1"
                                     />
-                                    {availableSymbols.length > 0 && symbolSearch && (
-                                        <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
-                                            {availableSymbols.map((s) => (
-                                                <div
-                                                    key={s}
-                                                    className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                    onClick={() => {
-                                                        setSymbol(s);
-                                                        setSymbolSearch('');
-                                                        setAvailableSymbols([]);
-                                                    }}
-                                                >
-                                                    {s}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    {availableSymbols.length > 0 &&
+                                        symbolSearch && (
+                                            <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                                                {availableSymbols.map((s) => (
+                                                    <div
+                                                        key={s}
+                                                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                        onClick={() => {
+                                                            setSymbol(s);
+                                                            setSymbolSearch('');
+                                                            setAvailableSymbols(
+                                                                []
+                                                            );
+                                                        }}
+                                                    >
+                                                        {s}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                 </div>
                                 <div>
                                     <Label>Number of Shares</Label>
@@ -418,13 +436,14 @@ export default function EditStockList() {
                                     />
                                 </div>
                                 <div className="flex items-end">
-                                    <Button 
-                                        type="button" 
+                                    <Button
+                                        type="button"
                                         onClick={addStock}
                                         className="w-full mt-1"
                                         disabled={isSubmitting}
                                     >
-                                        <Plus className="h-4 w-4 mr-1" /> Add Stock
+                                        <Plus className="h-4 w-4 mr-1" /> Add
+                                        Stock
                                     </Button>
                                 </div>
                             </div>
@@ -432,26 +451,40 @@ export default function EditStockList() {
 
                         {/* Show list of stocks */}
                         <div className="border rounded-md p-4">
-                            <h3 className="text-lg font-medium mb-4">Stocks in List</h3>
+                            <h3 className="text-lg font-medium mb-4">
+                                Stocks in List
+                            </h3>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Symbol</TableHead>
-                                        <TableHead className="text-right">Shares</TableHead>
-                                        <TableHead className="w-[100px]">Actions</TableHead>
+                                        <TableHead className="text-right">
+                                            Shares
+                                        </TableHead>
+                                        <TableHead className="w-[100px]">
+                                            Actions
+                                        </TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {stockList.items.length > 0 ? (
                                         stockList.items.map((item) => (
                                             <TableRow key={item.symbol}>
-                                                <TableCell className="font-medium">{item.symbol}</TableCell>
-                                                <TableCell className="text-right">{item.num_shares}</TableCell>
+                                                <TableCell className="font-medium">
+                                                    {item.symbol}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {item.num_shares}
+                                                </TableCell>
                                                 <TableCell>
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => removeStock(item.symbol)}
+                                                        onClick={() =>
+                                                            removeStock(
+                                                                item.symbol
+                                                            )
+                                                        }
                                                         className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 p-0 h-8 w-8"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -461,7 +494,10 @@ export default function EditStockList() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                                            <TableCell
+                                                colSpan={3}
+                                                className="text-center py-4 text-muted-foreground"
+                                            >
                                                 No stocks in this list yet
                                             </TableCell>
                                         </TableRow>

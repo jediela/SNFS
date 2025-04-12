@@ -72,10 +72,15 @@ export default function PortfolioDetails() {
 
             // Ensure numeric values are properly parsed
             if (transactionsData.transactions) {
-                const parsedTransactions = transactionsData.transactions.map((txn: TransactionData) => ({
-                    ...txn,
-                    amount: typeof txn.amount === 'string' ? Number(txn.amount) : txn.amount
-                }));
+                const parsedTransactions = transactionsData.transactions.map(
+                    (txn: TransactionData) => ({
+                        ...txn,
+                        amount:
+                            typeof txn.amount === 'string'
+                                ? Number(txn.amount)
+                                : txn.amount,
+                    })
+                );
                 setTransactions(parsedTransactions);
             } else {
                 setTransactions([]);
@@ -89,7 +94,9 @@ export default function PortfolioDetails() {
 
             // Ensure balance is a number
             if (portfolioData.portfolio) {
-                portfolioData.portfolio.balance = Number(portfolioData.portfolio.balance);
+                portfolioData.portfolio.balance = Number(
+                    portfolioData.portfolio.balance
+                );
                 setPortfolio(portfolioData.portfolio);
             }
         } catch (error) {
@@ -141,7 +148,7 @@ export default function PortfolioDetails() {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
     }, []);
-    
+
     useEffect(() => {
         if (user) fetchPortfolioData();
     }, [user, fetchPortfolioData]);

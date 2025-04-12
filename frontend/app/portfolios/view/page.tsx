@@ -42,13 +42,15 @@ export default function ViewPortfolio() {
                 { method: 'GET' }
             );
             const data = await res.json();
-            
+
             // Ensure all portfolios have numeric balance values
             if (data.portfolios) {
-                const parsedPortfolios = data.portfolios.map((portfolio: PortfolioData) => ({
-                    ...portfolio,
-                    balance: Number(portfolio.balance)
-                }));
+                const parsedPortfolios = data.portfolios.map(
+                    (portfolio: PortfolioData) => ({
+                        ...portfolio,
+                        balance: Number(portfolio.balance),
+                    })
+                );
                 setPortfolios(parsedPortfolios);
             } else {
                 setPortfolios([]);
@@ -63,7 +65,7 @@ export default function ViewPortfolio() {
         const storedUser = localStorage.getItem('user');
         if (storedUser) setUser(JSON.parse(storedUser));
     }, []);
-    
+
     useEffect(() => {
         if (user) fetchPortfolios();
     }, [user, fetchPortfolios]);
@@ -90,7 +92,10 @@ export default function ViewPortfolio() {
                                 <CardTitle>{portfolio.name}</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p>Balance: ${Number(portfolio.balance).toFixed(2)}</p>
+                                <p>
+                                    Balance: $
+                                    {Number(portfolio.balance).toFixed(2)}
+                                </p>
                             </CardContent>
                             <CardFooter className="flex flex-col items-start gap-2">
                                 <Button

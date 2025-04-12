@@ -7,7 +7,6 @@ def create_app():
     CORS(app)
 
     # Import and register blueprints
-    from app.routes.car_routes import car_bp
     from app.routes.user_routes import user_bp
     from app.routes.stock_list_routes import stock_list_bp
     from app.routes.review_routes import review_bp
@@ -15,9 +14,9 @@ def create_app():
     from app.routes.portfolio_routes import portfolio_bp
     from app.routes.stock_routes import stock_bp
     from app.routes.cash_transactions_routes import cash_transactions_bp 
+    from app.routes.friends_routes import friends_bp
 
     # Register blueprints
-    app.register_blueprint(car_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(stock_list_bp)
     app.register_blueprint(review_bp)
@@ -25,5 +24,6 @@ def create_app():
     app.register_blueprint(portfolio_bp)
     app.register_blueprint(stock_bp)
     app.register_blueprint(cash_transactions_bp)
-
+    app.register_blueprint(friends_bp)
+    
     return app

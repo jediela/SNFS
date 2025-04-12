@@ -1,7 +1,13 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useEffect, useState } from 'react';
@@ -9,7 +15,10 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export default function AddStockData() {
-    const [user, setUser] = useState<{ user_id: number; username: string } | null>(null);
+    const [user, setUser] = useState<{
+        user_id: number;
+        username: string;
+    } | null>(null);
     const [symbol, setSymbol] = useState('');
     const [date, setDate] = useState('');
     const [open, setOpen] = useState('');
@@ -69,22 +78,22 @@ export default function AddStockData() {
     // Validate date is within allowed range
     const validateDate = (dateStr: string) => {
         if (!dateStr) return false;
-        
+
         const selectedDate = new Date(dateStr);
         const minDate = new Date(MIN_DATE);
-        
+
         if (selectedDate < minDate) {
             toast.error(`Date must be on or after ${MIN_DATE}`);
             return false;
         }
-        
+
         return true;
     };
 
     // Handle form submission
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        
+
         if (!user) {
             toast.error('Please log in to add stock data');
             return;
@@ -113,7 +122,7 @@ export default function AddStockData() {
             (numOpen !== null && isNaN(numOpen)) ||
             (numHigh !== null && isNaN(numHigh)) ||
             (numLow !== null && isNaN(numLow)) ||
-            isNaN(numClose) || 
+            isNaN(numClose) ||
             isNaN(numVolume)
         ) {
             toast.error('Please enter valid numerical values');
@@ -147,7 +156,7 @@ export default function AddStockData() {
             });
 
             const data = await res.json();
-            
+
             if (!res.ok) {
                 throw new Error(data.error || 'Error adding stock data');
             }
@@ -164,9 +173,10 @@ export default function AddStockData() {
             setLow('');
             setClose('');
             setVolume('');
-            
         } catch (error) {
-            toast.error(error instanceof Error ? error.message : 'An error occurred');
+            toast.error(
+                error instanceof Error ? error.message : 'An error occurred'
+            );
         } finally {
             setIsSubmitting(false);
         }
@@ -178,7 +188,8 @@ export default function AddStockData() {
                 <CardHeader>
                     <CardTitle className="text-2xl">Add Stock Data</CardTitle>
                     <CardDescription>
-                        Add new stock price data from {MIN_DATE} onward. This data will be incorporated into analysis and predictions.
+                        Add new stock price data from {MIN_DATE} onward. This
+                        data will be incorporated into analysis and predictions.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -192,28 +203,30 @@ export default function AddStockData() {
                                         placeholder="e.g., AAPL"
                                         value={symbol}
                                         onChange={(e) => {
-                                            const value = e.target.value.toUpperCase();
+                                            const value =
+                                                e.target.value.toUpperCase();
                                             setSymbol(value);
                                             setSymbolSearch(value);
                                         }}
                                         required
                                     />
-                                    {availableSymbols.length > 0 && symbolSearch && (
-                                        <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
-                                            {availableSymbols.map((s) => (
-                                                <div
-                                                    key={s}
-                                                    className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                    onClick={() => {
-                                                        setSymbol(s);
-                                                        setSymbolSearch('');
-                                                    }}
-                                                >
-                                                    {s}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    {availableSymbols.length > 0 &&
+                                        symbolSearch && (
+                                            <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                                                {availableSymbols.map((s) => (
+                                                    <div
+                                                        key={s}
+                                                        className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                        onClick={() => {
+                                                            setSymbol(s);
+                                                            setSymbolSearch('');
+                                                        }}
+                                                    >
+                                                        {s}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -228,7 +241,8 @@ export default function AddStockData() {
                                     required
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    Only dates from {MIN_DATE} onward are accepted
+                                    Only dates from {MIN_DATE} onward are
+                                    accepted
                                 </p>
                             </div>
                         </div>
@@ -301,17 +315,14 @@ export default function AddStockData() {
                         </div>
 
                         <div className="flex justify-end gap-3">
-                            <Button 
-                                type="button" 
+                            <Button
+                                type="button"
                                 variant="outline"
                                 onClick={() => router.push('/stocks/view')}
                             >
                                 Cancel
                             </Button>
-                            <Button 
-                                type="submit" 
-                                disabled={isSubmitting}
-                            >
+                            <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting ? 'Adding...' : 'Add Stock Data'}
                             </Button>
                         </div>

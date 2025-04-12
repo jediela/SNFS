@@ -231,10 +231,15 @@ export default function ViewStockLists() {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    onClick={() => router.push(`/stocklists/edit/${list.list_id}`)}
+                                                                    onClick={() =>
+                                                                        router.push(
+                                                                            `/stocklists/edit/${list.list_id}`
+                                                                        )
+                                                                    }
                                                                     className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                                                                 >
-                                                                    <Edit className="h-4 w-4 mr-1" /> Edit
+                                                                    <Edit className="h-4 w-4 mr-1" />{' '}
+                                                                    Edit
                                                                 </Button>
                                                                 <Button
                                                                     variant="ghost"
@@ -246,7 +251,8 @@ export default function ViewStockLists() {
                                                                         )
                                                                     }
                                                                 >
-                                                                    <Trash2 className="h-4 w-4 mr-1" /> Delete
+                                                                    <Trash2 className="h-4 w-4 mr-1" />{' '}
+                                                                    Delete
                                                                 </Button>
                                                             </div>
                                                         )}

@@ -1,18 +1,3 @@
--- Cars dummy table
-CREATE TABLE IF NOT EXISTS cars (
-    id SERIAL PRIMARY KEY,
-    make VARCHAR(50) NOT NULL,
-    model VARCHAR(50) NOT NULL,
-    year INT NOT NULL,
-    price NUMERIC(10,2) NOT NULL
-);
-
--- Insert dummy data into cars table
-INSERT INTO cars (make, model, year, price) VALUES
-('Toyota', 'Camry', 2020, 24000.00),
-('Honda', 'Accord', 2019, 22000.00),
-('Ford', 'Mustang', 2021, 35000.00);
-
 -- Users table
 CREATE TABLE IF NOT EXISTS Users (
     user_id SERIAL PRIMARY KEY,
@@ -42,7 +27,6 @@ CREATE TABLE IF NOT EXISTS Stocks (
     symbol VARCHAR(5) PRIMARY KEY,
     company_name VARCHAR(100) NOT NULL
 );
-
 
 -- Stock Holdings table
 CREATE TABLE IF NOT EXISTS StockHoldings (
@@ -117,8 +101,15 @@ CREATE TABLE IF NOT EXISTS FriendRequests (
     to_user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
     status VARCHAR(10) CHECK (status IN ('pending', 'accepted', 'rejected')),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (from_user_id, to_user_id),  -- Prevent duplicate requests
     CHECK (from_user_id != to_user_id)  -- Prevent users from sending requests to themselves
+);
+
+CREATE TABLE IF NOT EXISTS Friends (
+    user1_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+    user2_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+    since TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user1_id, user2_id),
+    CHECK (user1_id < user2_id)  -- Avoid duplicate entries
 );
 
 -- Shared List table
