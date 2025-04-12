@@ -2,6 +2,7 @@ from flask import jsonify
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from .base import get_connection
+from datetime import datetime
 
 
 def get_user_id_by_username(username):
@@ -371,6 +372,201 @@ def share_stock_list(owner_id, list_id, receiver_id):
             }), 200
 
     except psycopg2.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+def get_stocklist_statistics(list_id, user_id, start_date=None, end_date=None):
+    """Calculate statistics for a stock list: beta, CoV, correlation matrix"""
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # 1. Validate access: list must be owned, shared, or public
+            cur.execute("""
+                SELECT 1
+                FROM StockLists sl
+                LEFT JOIN SharedLists sh ON sl.list_id = sh.list_id AND sh.shared_user = %s
+                WHERE sl.list_id = %s AND (
+                    sl.user_id = %s OR sl.visibility = 'public' OR sh.shared_user = %s
+                )
+            """, (user_id, list_id, user_id, user_id))
+            
+            if not cur.fetchone():
+                return jsonify({"error": "Stock list not found or access denied"}), 403
+
+            # 2. Fetch stock list items
+            cur.execute("""
+                SELECT symbol, num_shares
+                FROM StockListItems
+                WHERE list_id = %s
+            """, (list_id,))
+            holdings = cur.fetchall()
+
+            if not holdings:
+                return jsonify({"error": "No stocks found in this list"}), 404
+
+            symbols = [h['symbol'] for h in holdings]
+
+            # 3. Determine date range
+            if not end_date:
+                end_date = datetime.now().strftime('%Y-%m-%d')
+            if not start_date:
+                cur.execute("""
+                    SELECT MIN(timestamp) FROM StockPrices
+                    WHERE symbol IN %s
+                """, (tuple(symbols),))
+                min_date = cur.fetchone()['min']
+                if not min_date:
+                    return jsonify({"error": "No historical data available for selected stocks"}), 404
+                start_date = min_date.strftime('%Y-%m-%d')
+
+            symbols_str = "','".join(symbols)
+
+            # 4. Daily return stats
+            cur.execute(f"""
+                WITH daily_prices AS (
+                    SELECT 
+                        symbol,
+                        timestamp,
+                        close,
+                        LAG(close) OVER (PARTITION BY symbol ORDER BY timestamp) AS prev_close
+                    FROM StockPrices
+                    WHERE symbol IN ('{symbols_str}')
+                    AND timestamp BETWEEN %s AND %s
+                ),
+                daily_returns AS (
+                    SELECT
+                        symbol,
+                        timestamp,
+                        ((close - prev_close) / prev_close) AS daily_return
+                    FROM daily_prices
+                    WHERE prev_close IS NOT NULL
+                ),
+                stock_stats AS (
+                    SELECT
+                        symbol,
+                        AVG(daily_return) AS mean_return,
+                        STDDEV(daily_return) AS stddev_return,
+                        COUNT(*) AS days
+                    FROM daily_returns
+                    GROUP BY symbol
+                )
+                SELECT
+                    symbol,
+                    mean_return,
+                    stddev_return,
+                    CASE 
+                        WHEN mean_return = 0 THEN NULL
+                        ELSE stddev_return / ABS(mean_return)
+                    END AS coefficient_of_variation,
+                    days
+                FROM stock_stats
+            """, (start_date, end_date))
+
+            stock_stats = cur.fetchall()
+
+            # 5. Market returns for beta (NVDA proxy)
+            market_symbol = 'NVDA'
+            cur.execute("""
+                WITH prices AS (
+                    SELECT timestamp, close,
+                    LAG(close) OVER (ORDER BY timestamp) AS prev_close
+                    FROM StockPrices
+                    WHERE symbol = %s AND timestamp BETWEEN %s AND %s
+                )
+                SELECT timestamp, ((close - prev_close) / prev_close) AS market_return
+                FROM prices
+                WHERE prev_close IS NOT NULL
+            """, (market_symbol, start_date, end_date))
+            market_returns = {r['timestamp']: r['market_return'] for r in cur.fetchall()}
+
+            # 6. Beta for each stock
+            betas = {}
+            for symbol in symbols:
+                cur.execute("""
+                    WITH prices AS (
+                        SELECT timestamp, close,
+                        LAG(close) OVER (ORDER BY timestamp) AS prev_close
+                        FROM StockPrices
+                        WHERE symbol = %s AND timestamp BETWEEN %s AND %s
+                    )
+                    SELECT timestamp, ((close - prev_close) / prev_close) AS stock_return
+                    FROM prices
+                    WHERE prev_close IS NOT NULL
+                """, (symbol, start_date, end_date))
+                rows = cur.fetchall()
+                pairs = [(r['stock_return'], market_returns[r['timestamp']])
+                         for r in rows if r['timestamp'] in market_returns]
+
+                if pairs:
+                    stock_mean = sum(x[0] for x in pairs) / len(pairs)
+                    market_mean = sum(x[1] for x in pairs) / len(pairs)
+                    cov = sum((x[0] - stock_mean) * (x[1] - market_mean) for x in pairs) / len(pairs)
+                    var = sum((x[1] - market_mean) ** 2 for x in pairs) / len(pairs)
+                    betas[symbol] = round(cov / var if var else 0, 4)
+                else:
+                    betas[symbol] = 0
+
+            # 7. Correlation matrix
+            correlation_matrix = []
+            for symbol1 in symbols:
+                correlations = {}
+                for symbol2 in symbols:
+                    if symbol1 == symbol2:
+                        correlations[symbol2] = 1.0
+                        continue
+                    cur.execute("""
+                        WITH s1 AS (
+                            SELECT timestamp, close, 
+                            LAG(close) OVER (ORDER BY timestamp) AS prev_close
+                            FROM StockPrices WHERE symbol = %s AND timestamp BETWEEN %s AND %s
+                        ),
+                        r1 AS (
+                            SELECT timestamp, ((close - prev_close) / prev_close) AS r
+                            FROM s1 WHERE prev_close IS NOT NULL
+                        ),
+                        s2 AS (
+                            SELECT timestamp, close, 
+                            LAG(close) OVER (ORDER BY timestamp) AS prev_close
+                            FROM StockPrices WHERE symbol = %s AND timestamp BETWEEN %s AND %s
+                        ),
+                        r2 AS (
+                            SELECT timestamp, ((close - prev_close) / prev_close) AS r
+                            FROM s2 WHERE prev_close IS NOT NULL
+                        ),
+                        joined AS (
+                            SELECT r1.r AS r1, r2.r AS r2
+                            FROM r1 JOIN r2 ON r1.timestamp = r2.timestamp
+                        )
+                        SELECT CORR(r1, r2) AS correlation FROM joined
+                    """, (symbol1, start_date, end_date, symbol2, start_date, end_date))
+                    result = cur.fetchone()
+                    correlation = result['correlation'] if result and result['correlation'] is not None else 0
+                    correlations[symbol2] = round(correlation, 4)
+                correlation_matrix.append({'symbol': symbol1, 'correlations': correlations})
+
+            # 8. Add beta to stats and compute list beta
+            total_shares = sum(h['num_shares'] for h in holdings)
+            enriched_stats = []
+            for stat in stock_stats:
+                sym = stat['symbol']
+                enriched_stats.append({**stat, 'beta': betas.get(sym, 0)})
+
+            list_beta = round(sum(
+                h['num_shares'] / total_shares * betas.get(h['symbol'], 0)
+                for h in holdings
+            ), 4) if total_shares > 0 else 0
+
+            return jsonify({
+                "list_id": list_id,
+                "date_range": {"start_date": start_date, "end_date": end_date},
+                "stock_statistics": enriched_stats,
+                "list_beta": list_beta,
+                "correlation_matrix": correlation_matrix
+            }), 200
+
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()

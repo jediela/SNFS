@@ -3,6 +3,7 @@ from app.db.stock_lists_db import (
     create_stock_list,
     add_item_to_stock_list,
     get_accessible_stock_lists,
+    get_stocklist_statistics,
     get_user_stock_lists,
     share_stock_list,
     verify_user_owns_list,
@@ -161,3 +162,19 @@ def share_list():
         return jsonify({"error": f"User '{username}' not found"}), 404
     
     return share_stock_list(owner_id, list_id, share_to_id)
+
+
+@stock_list_bp.route("/<int:list_id>/statistics", methods=["GET"])
+def view_stocklist_statistics(list_id):
+    user_id = request.args.get("user_id")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        return jsonify({"error": "Invalid User ID"}), 400
+
+    return get_stocklist_statistics(list_id, user_id, start_date, end_date)

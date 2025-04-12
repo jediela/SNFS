@@ -731,52 +731,6 @@ export default function ViewStocks() {
                                             )}
                                         </TableBody>
                                     </Table>
-
-                                    <div className="mt-4 p-3 bg-muted rounded-md text-sm">
-                                        <p className="font-medium mb-1">
-                                            How to read this matrix:
-                                        </p>
-                                        <ul className="list-disc list-inside space-y-1">
-                                            <li>
-                                                <span className="text-red-600 font-medium">
-                                                    Highly positive (0.7+)
-                                                </span>
-                                                : Stocks move strongly together
-                                            </li>
-                                            <li>
-                                                <span className="text-orange-600 font-medium">
-                                                    Moderately positive
-                                                    (0.3-0.7)
-                                                </span>
-                                                : Stocks tend to move together
-                                            </li>
-                                            <li>
-                                                <span className="text-gray-600 font-medium">
-                                                    Low correlation (-0.3 to
-                                                    0.3)
-                                                </span>
-                                                : Little relationship
-                                            </li>
-                                            <li>
-                                                <span className="text-blue-600 font-medium">
-                                                    Moderately negative (-0.3 to
-                                                    -0.7)
-                                                </span>
-                                                : Stocks tend to move opposite
-                                            </li>
-                                            <li>
-                                                <span className="text-green-600 font-medium">
-                                                    Highly negative (below -0.7)
-                                                </span>
-                                                : Stocks move strongly opposite
-                                            </li>
-                                        </ul>
-                                        <p className="mt-2 text-xs text-muted-foreground">
-                                            Lower correlation between stocks
-                                            helps reduce portfolio risk through
-                                            diversification.
-                                        </p>
-                                    </div>
                                 </CardContent>
                             </Card>
                         </>
