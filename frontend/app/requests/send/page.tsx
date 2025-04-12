@@ -10,7 +10,7 @@ export default function SendRequest() {
         user_id: number;
         username: string;
     } | null>(null);
-    const [receiverId, setReceiverId] = useState('');
+    const [receiverUsername, setReceiverUsername] = useState('');
 
     async function handleSend(e: React.FormEvent) {
         e.preventDefault();
@@ -23,7 +23,7 @@ export default function SendRequest() {
                 },
                 body: JSON.stringify({
                     senderId: user.user_id,
-                    receiverId,
+                    receiverUsername,
                 }),
             });
             const data = await res.json();
@@ -34,7 +34,7 @@ export default function SendRequest() {
             toast.success(data.message, {
                 description: `request_id: ${data.request.request_id}, sender_id: ${data.request.from_user_id}, receiver_id: ${data.request.to_user_id}, Status: ${data.request.status}`,
             });
-            setReceiverId('');
+            setReceiverUsername('');
         } catch (error) {
             toast.error(String(error));
         }
@@ -54,13 +54,15 @@ export default function SendRequest() {
                 <div className="flex flex-col gap-6">
                     <div className="grid gap-2">
                         <div className="flex items-center">
-                            <Label>Send Request to: User ID</Label>
+                            <Label>Send to: Username</Label>
                         </div>
                         <Input
-                            placeholder="Receiver User ID"
-                            value={receiverId}
+                            placeholder="Receiver Username"
+                            value={receiverUsername}
                             required
-                            onChange={(e) => setReceiverId(e.target.value)}
+                            onChange={(e) =>
+                                setReceiverUsername(e.target.value)
+                            }
                         />
                     </div>
                     <Button type="submit" className="w-full">

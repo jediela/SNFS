@@ -9,12 +9,10 @@ def handle_cash_transaction(portfolio_id, transaction_type, amount):
     """
     conn = get_connection()
     try:
-        # Validate transaction type first
         if transaction_type not in ['deposit', 'withdrawal']:
             return jsonify({"error": "Invalid transaction type"}), 400
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Atomic operation: Update balance + record transaction
             cur.execute("""
                 WITH balance_update AS (
                     UPDATE Portfolios

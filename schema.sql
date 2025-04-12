@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS Stocks (
     company_name VARCHAR(100) NOT NULL
 );
 
-
 -- Stock Holdings table
 CREATE TABLE IF NOT EXISTS StockHoldings (
     portfolio_id INT NOT NULL REFERENCES Portfolios(portfolio_id) ON DELETE CASCADE,
@@ -102,8 +101,15 @@ CREATE TABLE IF NOT EXISTS FriendRequests (
     to_user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
     status VARCHAR(10) CHECK (status IN ('pending', 'accepted', 'rejected')),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (from_user_id, to_user_id),  -- Prevent duplicate requests
     CHECK (from_user_id != to_user_id)  -- Prevent users from sending requests to themselves
+);
+
+CREATE TABLE IF NOT EXISTS Friends (
+    user1_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+    user2_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
+    since TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user1_id, user2_id),
+    CHECK (user1_id < user2_id)  -- Avoid duplicate entries
 );
 
 -- Shared List table
