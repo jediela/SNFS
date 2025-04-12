@@ -125,7 +125,7 @@ export default function ViewPortfolio() {
 
             toast.success(data.message || 'Transfer successful');
             fetchPortfolios();
-        } catch (error) {
+        } catch {
             toast.error('Failed to connect to server');
         }
 
