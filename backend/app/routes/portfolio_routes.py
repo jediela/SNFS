@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.db.portfolios_db import create_portfolio, view_user_portfolios, get_portfolio_by_id
+from app.db.portfolios_db import create_portfolio, transfer_funds, view_user_portfolios, get_portfolio_by_id
 from app.db.stock_transactions_db import (
     handle_stock_transaction, 
     get_portfolio_stock_transactions, 
@@ -55,17 +55,15 @@ def stock_transaction():
     portfolio_id = data.get("portfolio_id")
     user_id = data.get("user_id")
     symbol = data.get("symbol")
-    transaction_type = data.get("transaction_type")  # 'buy' or 'sell'
+    transaction_type = data.get("transaction_type")
     num_shares = data.get("num_shares")
     price_per_share = data.get("price_per_share")
     
-    # Basic validation
     if not all([portfolio_id, user_id, symbol, transaction_type, num_shares, price_per_share]):
         return jsonify({
             "error": "Missing required fields: portfolio_id, user_id, symbol, transaction_type, num_shares, price_per_share"
         }), 400
         
-    # Convert types
     try:
         portfolio_id = int(portfolio_id)
         user_id = int(user_id)
@@ -74,7 +72,6 @@ def stock_transaction():
     except ValueError:
         return jsonify({"error": "Invalid numeric values"}), 400
         
-    # Handle the transaction
     return handle_stock_transaction(
         portfolio_id, symbol.upper(), transaction_type,
         num_shares, price_per_share, user_id
@@ -129,3 +126,16 @@ def get_statistics(portfolio_id):
         return jsonify({"error": "Invalid user ID"}), 400
         
     return get_portfolio_statistics(portfolio_id, user_id, start_date, end_date)
+
+
+@portfolio_bp.route("/transfer", methods=["POST"])
+def transfer_between_portfolios():
+    data = request.json
+    from_id = data.get("fromPortfolioId")
+    to_id = data.get("toPortfolioId")
+    amount = data.get("amount")
+
+    if not all([from_id, to_id, amount]):
+        return jsonify({"error": "Missing required fields: fromPortfolioId, toPortfolioId, amount"}), 400
+
+    return transfer_funds(from_id, to_id, amount)
