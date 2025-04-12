@@ -99,7 +99,7 @@ def share_list():
     list_id = data.get("listId")
     owner_id = data.get("ownerId")
 
-    if not username or not list_id:
+    if not username or not list_id or not owner_id:
         return jsonify({"error": "Username and List Id is required"}), 400
 
     share_to_id = get_user_id_by_username(username)

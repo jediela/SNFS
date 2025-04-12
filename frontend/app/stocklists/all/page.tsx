@@ -17,10 +17,8 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
 
 interface StockList {
     list_id: number;
@@ -36,9 +34,7 @@ export default function MyStockLists() {
     } | null>(null);
     const [openDialogId, setOpenDialogId] = useState<number | null>(null);
     const [shareUsername, setShareUsername] = useState('');
-
     const [stockLists, setStockLists] = useState<StockList[]>([]);
-    const router = useRouter();
 
     async function fetchStockLists() {
         if (!user) return;
