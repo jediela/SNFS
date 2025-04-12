@@ -101,24 +101,39 @@ export default function ViewPortfolio() {
     }
 
     async function handleTransfer() {
-        if (!selectedTarget || !sourceId || !amount || Number(amount) <= 0) {
-            toast.error("Missing or invalid transfer details");
-            return;
-        }
-    
-        
+        try {
+            const res = await fetch(
+                'http://localhost:8000/portfolios/transfer',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        fromPortfolioId: sourceId,
+                        toPortfolioId: selectedTarget?.portfolio_id,
+                        amount: parseFloat(amount),
+                    }),
+                }
+            );
 
-        toast.success(
-            `Transferring $${amount} from ${sourceId} to ${selectedTarget.portfolio_id}`
-        );
-    
-    
-        // Reset modal state
+            const data = await res.json();
+
+            if (!res.ok) {
+                toast.error(data.error || 'Transfer failed');
+                return;
+            }
+
+            toast.success(data.message || 'Transfer successful');
+            fetchPortfolios();
+        } catch (error) {
+            toast.error('Failed to connect to server');
+        }
+
         setSelectedTarget(null);
         setSourceId(null);
         setAmount('');
     }
-    
 
     return (
         <>
