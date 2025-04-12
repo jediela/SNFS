@@ -245,7 +245,7 @@ export default function ViewPortfolio() {
                                         )
                                     }
                                 >
-                                    💸 View Cash Transactions
+                                    View Cash Transactions
                                 </Button>
                                 <Button
                                     onClick={() =>
@@ -254,7 +254,7 @@ export default function ViewPortfolio() {
                                         )
                                     }
                                 >
-                                    📈 View Stock Transactions
+                                    View Stock Transactions
                                 </Button>
                                 {portfolios.length >= 2 && (
                                     <Button
@@ -263,7 +263,7 @@ export default function ViewPortfolio() {
                                             setSelectedTarget(portfolio)
                                         }
                                     >
-                                        🔁 Transfer Money to this Portfolio
+                                        Transfer Money to this Portfolio
                                     </Button>
                                 )}
                             </CardFooter>
