@@ -178,9 +178,14 @@ export default function PortfolioDetails() {
             >
                 ← Back to Portfolios
             </Button>
-            <h1 className="text-3xl font-bold mb-6">
-                {portfolio?.name} (ID: {portfolio?.portfolio_id})
-            </h1>
+            <div className="mb-6">
+                <h1 className="text-3xl font-bold">
+                    {portfolio?.name} - Cash Transactions
+                </h1>
+                <span className="inline-block text-sm text-muted-foreground bg-gray-100 px-2 py-0.5 rounded mt-1">
+                    ID: {portfolio?.portfolio_id}
+                </span>
+            </div>
 
             {/* Balance Display */}
             <div className="mb-8 p-4 bg-card rounded-lg shadow">

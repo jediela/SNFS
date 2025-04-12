@@ -230,13 +230,12 @@ export default function ViewPortfolio() {
                     {portfolios.map((portfolio) => (
                         <Card key={portfolio.portfolio_id}>
                             <CardHeader>
-                                <CardTitle>{portfolio.name}</CardTitle>
+                                <CardTitle className="text-lg">
+                                    {portfolio.name}
+                                </CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <p>
-                                    Balance: $
-                                    {Number(portfolio.balance).toFixed(2)}
-                                </p>
+                            <CardContent className="-mt-2">
+                                Balance: ${Number(portfolio.balance).toFixed(2)}
                             </CardContent>
                             <CardFooter className="flex flex-col items-start gap-2">
                                 <Button
@@ -246,7 +245,7 @@ export default function ViewPortfolio() {
                                         )
                                     }
                                 >
-                                    View Cash Transactions
+                                    💸 View Cash Transactions
                                 </Button>
                                 <Button
                                     onClick={() =>
@@ -255,7 +254,7 @@ export default function ViewPortfolio() {
                                         )
                                     }
                                 >
-                                    View Stock Transactions
+                                    📈 View Stock Transactions
                                 </Button>
                                 {portfolios.length >= 2 && (
                                     <Button
@@ -264,7 +263,7 @@ export default function ViewPortfolio() {
                                             setSelectedTarget(portfolio)
                                         }
                                     >
-                                        Transfer Money to this Portfolio
+                                        🔁 Transfer Money to this Portfolio
                                     </Button>
                                 )}
                             </CardFooter>

@@ -324,9 +324,14 @@ export default function ViewStocks() {
             >
                 ← Back to Portfolios
             </Button>
-            <h1 className="text-3xl font-bold mb-6">
-                {portfolio?.name} - Stock Holdings
-            </h1>
+            <div className="mb-6">
+                <h1 className="text-3xl font-bold">
+                    {portfolio?.name} - Stock Holdings
+                </h1>
+                <span className="inline-block text-sm text-muted-foreground bg-gray-100 px-2 py-0.5 rounded mt-1">
+                    ID: {portfolio?.portfolio_id}
+                </span>
+            </div>
 
             {/* Portfolio Summary - Modified to remove Beta card */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
