@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS StockTransactions (
     symbol VARCHAR(5) NOT NULL REFERENCES Stocks(symbol) ON DELETE CASCADE,
     type VARCHAR(10) CHECK (type IN ('buy', 'sell')),
     num_shares INT NOT NULL CHECK (num_shares > 0),
-    price DECIMAL(15, 2) NOT NULL,  -- Price per share at transaction time
+    price DECIMAL(15, 2) NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS StockPrices (
     low DECIMAL(15, 2) NOT NULL,
     close DECIMAL(15, 2) NOT NULL,
     volume BIGINT NOT NULL,
-    PRIMARY KEY (symbol, timestamp)  -- Unique price per symbol per day
+    PRIMARY KEY (symbol, timestamp)
 );
 
 -- Stock Predictions table
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS Reviews (
     user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
     content TEXT NOT NULL CHECK (LENGTH(content) <= 4000),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (list_id, user_id)  -- One review per user per list
+    UNIQUE (list_id, user_id)
 );
 
 -- Friend Request table
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS FriendRequests (
     to_user_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
     status VARCHAR(10) CHECK (status IN ('pending', 'accepted', 'rejected')),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CHECK (from_user_id != to_user_id)  -- Prevent users from sending requests to themselves
+    CHECK (from_user_id != to_user_id)
 );
 
 CREATE TABLE IF NOT EXISTS Friends (
@@ -109,12 +109,12 @@ CREATE TABLE IF NOT EXISTS Friends (
     user2_id INT NOT NULL REFERENCES Users(user_id) ON DELETE CASCADE,
     since TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user1_id, user2_id),
-    CHECK (user1_id < user2_id)  -- Avoid duplicate entries
+    CHECK (user1_id < user2_id)
 );
 
 -- Shared List table
 CREATE TABLE SharedLists (
     list_id INT NOT NULL REFERENCES StockLists(list_id) ON DELETE CASCADE,
-    shared_user INT REFERENCES Users(user_id) ON DELETE CASCADE,  -- NULL = public
+    shared_user INT REFERENCES Users(user_id) ON DELETE CASCADE,
     PRIMARY KEY (list_id, shared_user)
 );
