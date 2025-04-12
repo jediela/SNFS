@@ -235,3 +235,306 @@ def get_stock_holdings(portfolio_id, user_id):
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+
+def get_portfolio_statistics(portfolio_id, user_id, start_date=None, end_date=None):
+    """Calculate portfolio statistics including volatility, beta, and correlation matrix"""
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Verify user owns the portfolio
+            cur.execute(
+                "SELECT 1 FROM Portfolios WHERE portfolio_id = %s AND user_id = %s",
+                (portfolio_id, user_id)
+            )
+            
+            if not cur.fetchone():
+                return jsonify({"error": "Portfolio not found or access denied"}), 403
+                
+            # Get all holdings for the portfolio
+            cur.execute("""
+                SELECT sh.symbol, sh.num_shares
+                FROM StockHoldings sh
+                WHERE sh.portfolio_id = %s
+            """, (portfolio_id,))
+            
+            holdings = cur.fetchall()
+            
+            if not holdings:
+                return jsonify({"error": "No holdings found in portfolio"}), 404
+            
+            # Set default date range if not provided
+            if not end_date:
+                end_date = datetime.now().strftime('%Y-%m-%d')
+            if not start_date:
+                # Default to 1 year of data or the maximum available
+                cur.execute("""
+                    SELECT MIN(timestamp) FROM StockPrices
+                    WHERE symbol IN (SELECT symbol FROM StockHoldings WHERE portfolio_id = %s)
+                """, (portfolio_id,))
+                min_date = cur.fetchone()['min']
+                if min_date:
+                    start_date = min_date.strftime('%Y-%m-%d')
+                else:
+                    return jsonify({"error": "No historical data available for holdings"}), 404
+                    
+            # Get symbols list for IN clause
+            symbols = [h['symbol'] for h in holdings]
+            symbols_str = "','".join(symbols)
+            
+            # Calculate statistics for each holding using SQL window functions
+            # This gets daily returns, mean, standard deviation, and coefficient of variation
+            cur.execute(f"""
+                WITH daily_prices AS (
+                    SELECT 
+                        symbol,
+                        timestamp,
+                        close,
+                        LAG(close) OVER (PARTITION BY symbol ORDER BY timestamp) AS prev_close
+                    FROM 
+                        StockPrices
+                    WHERE 
+                        symbol IN ('{symbols_str}')
+                        AND timestamp BETWEEN %s AND %s
+                ),
+                daily_returns AS (
+                    SELECT
+                        symbol,
+                        timestamp,
+                        close,
+                        ((close - prev_close) / prev_close) AS daily_return
+                    FROM
+                        daily_prices
+                    WHERE
+                        prev_close IS NOT NULL
+                ),
+                stock_stats AS (
+                    SELECT
+                        symbol,
+                        AVG(daily_return) AS mean_return,
+                        STDDEV(daily_return) AS stddev_return,
+                        COUNT(*) AS days
+                    FROM
+                        daily_returns
+                    GROUP BY
+                        symbol
+                )
+                SELECT
+                    symbol,
+                    mean_return,
+                    stddev_return,
+                    CASE 
+                        WHEN mean_return = 0 THEN NULL
+                        ELSE stddev_return / ABS(mean_return)
+                    END AS coefficient_of_variation,
+                    days
+                FROM
+                    stock_stats
+            """, (start_date, end_date))
+            
+            stock_stats = cur.fetchall()
+            
+            # Calculate market returns for beta calculation (using NVDA proxy)
+            # Using NVDA as our market proxy instead of SPY for fun :)
+            market_symbol = 'NVDA'
+            cur.execute("""
+                WITH market_prices AS (
+                    SELECT 
+                        timestamp,
+                        close,
+                        LAG(close) OVER (ORDER BY timestamp) AS prev_close
+                    FROM 
+                        StockPrices
+                    WHERE 
+                        symbol = %s
+                        AND timestamp BETWEEN %s AND %s
+                ),
+                market_returns AS (
+                    SELECT
+                        timestamp,
+                        ((close - prev_close) / prev_close) AS market_return
+                    FROM
+                        market_prices
+                    WHERE
+                        prev_close IS NOT NULL
+                )
+                SELECT
+                    timestamp,
+                    market_return
+                FROM
+                    market_returns
+                ORDER BY
+                    timestamp
+            """, (market_symbol, start_date, end_date))
+            
+            market_returns = {row['timestamp']: row['market_return'] for row in cur.fetchall()}
+            
+            # Calculate beta for each stock
+            betas = {}
+            for symbol in symbols:
+                cur.execute("""
+                    WITH stock_prices AS (
+                        SELECT 
+                            timestamp,
+                            close,
+                            LAG(close) OVER (ORDER BY timestamp) AS prev_close
+                        FROM 
+                            StockPrices
+                        WHERE 
+                            symbol = %s
+                            AND timestamp BETWEEN %s AND %s
+                    ),
+                    stock_returns AS (
+                        SELECT
+                            timestamp,
+                            ((close - prev_close) / prev_close) AS stock_return
+                        FROM
+                            stock_prices
+                        WHERE
+                            prev_close IS NOT NULL
+                    )
+                    SELECT
+                        timestamp,
+                        stock_return
+                    FROM
+                        stock_returns
+                    ORDER BY
+                        timestamp
+                """, (symbol, start_date, end_date))
+                
+                stock_returns = cur.fetchall()
+                
+                # Calculate covariance and beta
+                stock_market_pairs = []
+                for row in stock_returns:
+                    if row['timestamp'] in market_returns:
+                        stock_market_pairs.append((
+                            row['stock_return'], 
+                            market_returns[row['timestamp']]
+                        ))
+                
+                if stock_market_pairs:
+                    # Calculate means
+                    stock_mean = sum(p[0] for p in stock_market_pairs) / len(stock_market_pairs)
+                    market_mean = sum(p[1] for p in stock_market_pairs) / len(stock_market_pairs)
+                    
+                    # Calculate covariance
+                    covariance = sum((p[0] - stock_mean) * (p[1] - market_mean) for p in stock_market_pairs) / len(stock_market_pairs)
+                    
+                    # Calculate market variance
+                    market_variance = sum((p[1] - market_mean) ** 2 for p in stock_market_pairs) / len(stock_market_pairs)
+                    
+                    # Calculate beta
+                    beta = covariance / market_variance if market_variance != 0 else 0
+                    betas[symbol] = round(beta, 4)
+                else:
+                    betas[symbol] = 0
+            
+            # Calculate correlation matrix
+            correlation_matrix = []
+            for symbol1 in symbols:
+                correlations = {}
+                for symbol2 in symbols:
+                    if symbol1 == symbol2:
+                        correlations[symbol2] = 1.0
+                        continue
+                        
+                    cur.execute("""
+                        WITH stock1_prices AS (
+                            SELECT 
+                                timestamp,
+                                close,
+                                LAG(close) OVER (ORDER BY timestamp) AS prev_close
+                            FROM 
+                                StockPrices
+                            WHERE 
+                                symbol = %s
+                                AND timestamp BETWEEN %s AND %s
+                        ),
+                        stock1_returns AS (
+                            SELECT
+                                timestamp,
+                                ((close - prev_close) / prev_close) AS return
+                            FROM
+                                stock1_prices
+                            WHERE
+                                prev_close IS NOT NULL
+                        ),
+                        stock2_prices AS (
+                            SELECT 
+                                timestamp,
+                                close,
+                                LAG(close) OVER (ORDER BY timestamp) AS prev_close
+                            FROM 
+                                StockPrices
+                            WHERE 
+                                symbol = %s
+                                AND timestamp BETWEEN %s AND %s
+                        ),
+                        stock2_returns AS (
+                            SELECT
+                                timestamp,
+                                ((close - prev_close) / prev_close) AS return
+                            FROM
+                                stock2_prices
+                            WHERE
+                                prev_close IS NOT NULL
+                        ),
+                        joined_returns AS (
+                            SELECT
+                                s1.return AS return1,
+                                s2.return AS return2
+                            FROM
+                                stock1_returns s1
+                            JOIN
+                                stock2_returns s2
+                            ON
+                                s1.timestamp = s2.timestamp
+                        )
+                        SELECT
+                            CORR(return1, return2) AS correlation
+                        FROM
+                            joined_returns
+                    """, (symbol1, start_date, end_date, symbol2, start_date, end_date))
+                    
+                    result = cur.fetchone()
+                    correlation = result['correlation'] if result and result['correlation'] is not None else 0
+                    correlations[symbol2] = round(correlation, 4)
+                
+                correlation_matrix.append({
+                    'symbol': symbol1,
+                    'correlations': correlations
+                })
+            
+            # Add beta and coefficient of variation to stock stats
+            stats_with_beta = []
+            for stat in stock_stats:
+                symbol = stat['symbol']
+                stats_with_beta.append({
+                    **stat,
+                    'beta': betas.get(symbol, 0)
+                })
+            
+            # Calculate portfolio beta (weighted average)
+            total_value = sum(holding['num_shares'] for holding in holdings)
+            portfolio_beta = 0
+            if total_value > 0:
+                portfolio_beta = sum(
+                    holding['num_shares'] / total_value * betas.get(holding['symbol'], 0)
+                    for holding in holdings
+                )
+            
+            return jsonify({
+                "portfolio_id": portfolio_id,
+                "date_range": {
+                    "start_date": start_date,
+                    "end_date": end_date
+                },
+                "stock_statistics": stats_with_beta,
+                "portfolio_beta": round(portfolio_beta, 4),
+                "correlation_matrix": correlation_matrix
+            }), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()

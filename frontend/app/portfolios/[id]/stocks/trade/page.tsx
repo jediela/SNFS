@@ -11,7 +11,7 @@ import {
     TableBody, TableCell 
 } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BarChart } from 'lucide-react';
 
 interface Portfolio {
     portfolio_id: number;
@@ -243,6 +243,11 @@ export default function TradeStocks() {
         }
     }
 
+    // Navigate to stock view page with pre-selected symbol
+    const viewStockHistory = (symbol: string) => {
+        router.push(`/stocks/view?symbol=${symbol}`);
+    };
+
     if (!portfolio) {
         return <div className="p-6">Loading portfolio information...</div>;
     }
@@ -368,7 +373,6 @@ export default function TradeStocks() {
                                     </div>
                                 )}
 
-                                {/* Show only the button for the selected transaction type */}
                                 {transactionType === 'buy' ? (
                                     <Button 
                                         onClick={() => handleTransaction('buy')} 
@@ -407,6 +411,7 @@ export default function TradeStocks() {
                                         <TableHead>Shares</TableHead>
                                         <TableHead className="text-right">Current Price</TableHead>
                                         <TableHead className="text-right">Value</TableHead>
+                                        <TableHead className="w-[50px]">History</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -419,13 +424,37 @@ export default function TradeStocks() {
                                                 setSymbolSearch('');
                                             }}
                                         >
-                                            <TableCell className="font-medium">{holding.symbol}</TableCell>
+                                            <TableCell className="font-medium">
+                                                <Button 
+                                                    variant="link" 
+                                                    className="p-0 h-auto font-medium text-blue-600 dark:text-blue-400"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        viewStockHistory(holding.symbol);
+                                                    }}
+                                                >
+                                                    {holding.symbol}
+                                                </Button>
+                                            </TableCell>
                                             <TableCell>{holding.num_shares}</TableCell>
                                             <TableCell className="text-right">
                                                 ${holding.current_price ? Number(holding.current_price).toFixed(2) : 'N/A'}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 ${holding.total_value ? Number(holding.total_value).toFixed(2) : 'N/A'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        viewStockHistory(holding.symbol);
+                                                    }}
+                                                    title="View Historical Performance"
+                                                >
+                                                    <BarChart className="h-4 w-4" />
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -440,10 +469,24 @@ export default function TradeStocks() {
                         {currentHoldings.length > 0 && (
                             <div className="mt-6 pt-4 border-t">
                                 <div className="flex justify-between items-center">
-                                    <span className="font-medium">Total Portfolio Value:</span>
+                                    <span className="font-medium">Total Stock Value:</span>
                                     <span className="font-bold text-lg">
                                         ${currentHoldings.reduce((total, holding) => 
                                             total + (holding.total_value || 0), 0).toFixed(2)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center mt-2">
+                                    <span className="font-medium">Cash Balance:</span>
+                                    <span className="font-bold text-lg">
+                                        ${portfolio?.balance ? Number(portfolio.balance).toFixed(2) : '0.00'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                                    <span className="font-medium">Total Portfolio Value:</span>
+                                    <span className="font-bold text-lg text-green-600 dark:text-green-400">
+                                        ${(currentHoldings.reduce((total, holding) => 
+                                            total + (holding.total_value || 0), 0) + 
+                                            (portfolio?.balance || 0)).toFixed(2)}
                                     </span>
                                 </div>
                             </div>

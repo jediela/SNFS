@@ -1,6 +1,11 @@
 from flask import Blueprint, request, jsonify
 from app.db.portfolios_db import create_portfolio, view_user_portfolios, get_portfolio_by_id
-from app.db.stock_transactions_db import handle_stock_transaction, get_portfolio_stock_transactions, get_stock_holdings
+from app.db.stock_transactions_db import (
+    handle_stock_transaction, 
+    get_portfolio_stock_transactions, 
+    get_stock_holdings,
+    get_portfolio_statistics
+)
 
 portfolio_bp = Blueprint("portfolio_bp", __name__, url_prefix="/portfolios")
 
@@ -106,3 +111,21 @@ def get_portfolio_holdings(portfolio_id):
         return jsonify({"error": "Invalid user ID"}), 400
         
     return get_stock_holdings(portfolio_id, user_id)
+
+
+@portfolio_bp.route("/<int:portfolio_id>/statistics", methods=["GET"])
+def get_statistics(portfolio_id):
+    """Get statistical analysis of portfolio holdings"""
+    user_id = request.args.get("user_id")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+        
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        return jsonify({"error": "Invalid user ID"}), 400
+        
+    return get_portfolio_statistics(portfolio_id, user_id, start_date, end_date)

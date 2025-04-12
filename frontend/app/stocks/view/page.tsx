@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { toast } from 'sonner';
+import { useSearchParams } from 'next/navigation';
 import { 
     Chart as ChartJS, 
     CategoryScale, 
@@ -50,7 +51,8 @@ type TimeInterval = 'week' | 'month' | 'quarter' | 'year' | '5years';
 type PredictionInterval = '7' | '30' | '90' | '180' | '365';
 type ViewMode = 'historical' | 'prediction';
 
-export default function StocksHistory() {
+// Inner component that uses useSearchParams
+function StockViewContent() {
     const formatIntervalLabel = (interval: TimeInterval): string => {
         switch (interval) {
             case 'week': return '1 Week';
@@ -82,6 +84,16 @@ export default function StocksHistory() {
     const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
     const [symbolSearch, setSymbolSearch] = useState('');
     const [viewMode, setViewMode] = useState<ViewMode>('historical');
+
+    const searchParams = useSearchParams();
+
+    // Check for symbol in URL params (for direct linking)
+    useEffect(() => {
+        const symbolFromUrl = searchParams?.get('symbol');
+        if (symbolFromUrl && !symbol) {
+            setSymbol(symbolFromUrl);
+        }
+    }, [searchParams, symbol]);
 
     // Fixed date bounds for stock data
     const MIN_DATE = '2013-02-08'; // Lower bound date
@@ -505,5 +517,22 @@ export default function StocksHistory() {
                 </Card>
             )}
         </div>
+    );
+}
+
+// Main component that wraps the inner component with Suspense
+export default function StocksHistory() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center py-10">
+                <div className="animate-pulse space-y-4 w-full max-w-4xl">
+                    <div className="h-10 bg-muted rounded-md w-3/4"></div>
+                    <div className="h-6 bg-muted rounded-md w-1/2"></div>
+                    <div className="h-[400px] bg-muted rounded-md w-full"></div>
+                </div>
+            </div>
+        }>
+            <StockViewContent />
+        </Suspense>
     );
 }
