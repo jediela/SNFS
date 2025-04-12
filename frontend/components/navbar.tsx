@@ -99,6 +99,9 @@ export default function Navbar() {
                         <MenubarItem asChild>
                             <Link href="/stocklists/view">View Lists</Link>
                         </MenubarItem>
+                        <MenubarItem asChild>
+                            <Link href="/stocklists/all">My Lists</Link>
+                        </MenubarItem>
                     </MenubarContent>
                 </MenubarMenu>
                 <MenubarMenu>
