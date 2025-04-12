@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/card';
 import {
     Dialog,
-    DialogTrigger,
     DialogContent,
     DialogHeader,
     DialogTitle,
