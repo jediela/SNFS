@@ -4,6 +4,19 @@ from psycopg2.extras import RealDictCursor
 from .base import get_connection
 
 
+def get_user_id_by_username(username):
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT user_id FROM Users WHERE username = %s", (username,))
+            result = cur.fetchone()
+            return result["user_id"] if result else None
+    except psycopg2.Error as e:
+        raise e
+    finally:
+        conn.close()
+
+
 def create_stock_list(user_id, name, visibility):
     conn = get_connection()
     try:
@@ -171,6 +184,70 @@ def delete_stock_list(list_id, user_id):
             return jsonify(
                 {"message": f"Stock list {list_id} deleted successfully"}
             ), 200
+    except psycopg2.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+def get_user_stock_lists(user_id):
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM StockLists WHERE user_id = %s ORDER BY list_id DESC;",
+                (user_id,),
+            )
+            lists = cur.fetchall()
+        if lists:
+            return jsonify({"stockLists": lists}), 200
+        else:
+            return jsonify({"message": "No stock lists found", "stockLists": []}), 200
+    except psycopg2.Error as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+        
+
+def share_stock_list(owner_id, list_id, receiver_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Check if the stock list exists and is owned by the owner_id
+            cur.execute("""
+                SELECT 1 FROM StockLists 
+                WHERE list_id = %s AND user_id = %s
+            """, (list_id, owner_id))
+            if not cur.fetchone():
+                return jsonify({
+                    "error": "You don't have permission to share this list or it doesn't exist"
+                }), 403
+
+            # Prevent sharing to self
+            if owner_id == receiver_id:
+                return jsonify({"error": "You cannot share with yourself"}), 400
+
+            # Check if they are friends
+            user1, user2 = sorted([owner_id, receiver_id])
+            cur.execute("""
+                SELECT 1 FROM Friends 
+                WHERE user1_id = %s AND user2_id = %s
+            """, (user1, user2))
+            if not cur.fetchone():
+                return jsonify({"error": "You can only share with friends"}), 403
+
+            # Insert into SharedLists if not already there
+            cur.execute("""
+                INSERT INTO SharedLists (list_id, shared_user)
+                VALUES (%s, %s)
+                ON CONFLICT DO NOTHING;
+            """, (list_id, receiver_id))
+
+            conn.commit()
+            return jsonify({
+                "message": f"Stock list {list_id} shared"
+            }), 200
+
     except psycopg2.Error as e:
         return jsonify({"error": str(e)}), 500
     finally:
