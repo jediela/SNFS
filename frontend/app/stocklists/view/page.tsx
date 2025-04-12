@@ -150,6 +150,10 @@ export default function ViewStockLists() {
         router.push(`/reviews/view?list_id=${listId}`);
     }
 
+    function handleViewStats(listId: number) {
+        router.push(`/stocklists/${listId}/stats`);
+    }
+
     return (
         <div className="space-y-10">
             <Card>
@@ -268,6 +272,16 @@ export default function ViewStockLists() {
                                                   ? 'Shared with you'
                                                   : 'Public'}
                                         </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                                handleViewStats(list.list_id)
+                                            }
+                                        >
+                                            View Stats
+                                        </Button>
+
                                         <Button
                                             variant="outline"
                                             size="sm"
