@@ -128,7 +128,6 @@ export default function PortfolioDetails() {
             const result = await response.json();
             toast.success(result.message || 'Transaction successful');
 
-            // Optional: refetch data to reflect balance and transactions
             fetchPortfolioData();
             setOpenDialog(false);
             setAmount('');
