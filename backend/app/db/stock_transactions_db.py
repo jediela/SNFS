@@ -8,7 +8,6 @@ from datetime import datetime
 def handle_stock_transaction(
     portfolio_id, symbol, transaction_type, num_shares, price_per_share, user_id
 ):
-    """Handle stock purchases and sales with validation and updates to balance and holdings"""
     conn = get_connection()
     try:
         # Validate transaction type
@@ -23,11 +22,11 @@ def handle_stock_transaction(
         if price_per_share <= 0:
             return jsonify({"error": "Price per share must be positive"}), 400
 
-        # Get current date for recording price data
+        # Current date for recording price data
         current_date = datetime.now().strftime("%Y-%m-%d")
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # First verify user owns the portfolio
+            # Check if user owns the portfolio
             cur.execute(
                 "SELECT user_id FROM Portfolios WHERE portfolio_id = %s",
                 (portfolio_id,),
@@ -42,25 +41,25 @@ def handle_stock_transaction(
                     {"error": "You don't have permission to modify this portfolio"}
                 ), 403
 
-            # Check if the stock exists in the system
+            # Check if stock exists
             cur.execute("SELECT * FROM Stocks WHERE symbol = %s", (symbol,))
             stock = cur.fetchone()
 
             if not stock:
-                # Stock doesn't exist, so add it
+                # Add stock
                 cur.execute(
                     "INSERT INTO Stocks (symbol, company_name) VALUES (%s, %s)",
                     (symbol, f"Company {symbol}"),
                 )
 
-            # Get most recent stock price for validation
+            # Get most recent stock price
             cur.execute(
                 "SELECT * FROM StockPrices WHERE symbol = %s ORDER BY timestamp DESC LIMIT 1",
                 (symbol,),
             )
             latest_price = cur.fetchone()
 
-            # For selling, check if user owns enough shares
+            # Check if user owns enough shares
             if transaction_type == "sell":
                 cur.execute(
                     "SELECT num_shares FROM StockHoldings WHERE portfolio_id = %s AND symbol = %s",
@@ -73,7 +72,7 @@ def handle_stock_transaction(
                         {"error": f"Not enough shares of {symbol} to sell"}
                     ), 400
 
-            # For buying, check if user has enough funds
+            # Check if user has enough funds
             total_amount = num_shares * price_per_share
             if transaction_type == "buy":
                 cur.execute(
@@ -85,8 +84,8 @@ def handle_stock_transaction(
                 if balance_info["balance"] < total_amount:
                     return jsonify({"error": "Insufficient funds for purchase"}), 400
 
-            # Start transaction - all or nothing
-            # 1. Update portfolio balance
+            # PERFORM TRANSACTION
+            # Update portfolio balance
             balance_change = (
                 -total_amount if transaction_type == "buy" else total_amount
             )
@@ -95,7 +94,7 @@ def handle_stock_transaction(
                 (balance_change, portfolio_id),
             )
 
-            # 2. Update or insert stock holding
+            # Update or insert stock holding
             if transaction_type == "buy":
                 cur.execute(
                     """
@@ -106,7 +105,7 @@ def handle_stock_transaction(
                 """,
                     (portfolio_id, symbol, num_shares, num_shares),
                 )
-            else:  # sell
+            else:
                 cur.execute(
                     """
                     UPDATE StockHoldings 
@@ -116,7 +115,7 @@ def handle_stock_transaction(
                     (num_shares, portfolio_id, symbol),
                 )
 
-                # Remove holding if shares become zero
+                # Remove holding if shares = 0
                 cur.execute(
                     """
                     DELETE FROM StockHoldings 
@@ -125,7 +124,7 @@ def handle_stock_transaction(
                     (portfolio_id, symbol),
                 )
 
-            # 3. Record the stock transaction
+            # Record the stock transaction
             cur.execute(
                 """
                 INSERT INTO StockTransactions 
@@ -138,8 +137,7 @@ def handle_stock_transaction(
 
             transaction = cur.fetchone()
 
-            # 4. Record the price data if it's for today and doesn't exist yet
-            # Check if we already have price data for this stock on this date
+            # Record price data if it's for today and dne
             cur.execute(
                 "SELECT * FROM StockPrices WHERE symbol = %s AND timestamp = %s",
                 (symbol, current_date),
@@ -147,8 +145,7 @@ def handle_stock_transaction(
             existing_price_data = cur.fetchone()
 
             if not existing_price_data and current_date >= "2018-02-08":
-                # Record this transaction's price as today's price
-                # We'll use the same price for open, high, low, close as a simplification
+                # Record  transactions price as todays price
                 cur.execute(
                     """
                     INSERT INTO StockPrices (symbol, timestamp, open, high, low, close, volume)
@@ -165,10 +162,9 @@ def handle_stock_transaction(
                     ),
                 )
 
-            # Commit the transaction
             conn.commit()
 
-            # Get updated balance and holdings for response
+            # Get updated balance and holdings
             cur.execute(
                 "SELECT balance FROM Portfolios WHERE portfolio_id = %s",
                 (portfolio_id,),
@@ -200,11 +196,10 @@ def handle_stock_transaction(
 
 
 def get_portfolio_stock_transactions(portfolio_id, user_id):
-    """Get all stock transactions for a portfolio"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Verify user owns the portfolio
+            # Check if user owns portfolio
             cur.execute(
                 "SELECT 1 FROM Portfolios WHERE portfolio_id = %s AND user_id = %s",
                 (portfolio_id, user_id),
@@ -213,7 +208,7 @@ def get_portfolio_stock_transactions(portfolio_id, user_id):
             if not cur.fetchone():
                 return jsonify({"error": "Portfolio not found or access denied"}), 403
 
-            # Get all transactions for the portfolio
+            # Get all transactions for portfolio
             cur.execute(
                 """
                 SELECT st.*, s.company_name 
@@ -235,11 +230,10 @@ def get_portfolio_stock_transactions(portfolio_id, user_id):
 
 
 def get_stock_holdings(portfolio_id, user_id):
-    """Get current stock holdings for a portfolio"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Verify user owns the portfolio
+            # Check if user owns portfolio
             cur.execute(
                 "SELECT 1 FROM Portfolios WHERE portfolio_id = %s AND user_id = %s",
                 (portfolio_id, user_id),
@@ -248,7 +242,7 @@ def get_stock_holdings(portfolio_id, user_id):
             if not cur.fetchone():
                 return jsonify({"error": "Portfolio not found or access denied"}), 403
 
-            # Get all holdings for the portfolio with latest prices
+            # Get all holdings for portfolio with latest prices
             cur.execute(
                 """
                 SELECT sh.symbol, sh.num_shares, s.company_name,
@@ -282,11 +276,10 @@ def get_stock_holdings(portfolio_id, user_id):
 
 
 def get_portfolio_statistics(portfolio_id, user_id, start_date=None, end_date=None):
-    """Calculate portfolio statistics including volatility, beta, and correlation matrix"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Verify user owns the portfolio
+            # Check if user owns portfolio
             cur.execute(
                 "SELECT 1 FROM Portfolios WHERE portfolio_id = %s AND user_id = %s",
                 (portfolio_id, user_id),
@@ -295,7 +288,7 @@ def get_portfolio_statistics(portfolio_id, user_id, start_date=None, end_date=No
             if not cur.fetchone():
                 return jsonify({"error": "Portfolio not found or access denied"}), 403
 
-            # Get all holdings for the portfolio
+            # Get all holdings for portfolio
             cur.execute(
                 """
                 SELECT sh.symbol, sh.num_shares
@@ -314,7 +307,6 @@ def get_portfolio_statistics(portfolio_id, user_id, start_date=None, end_date=No
             if not end_date:
                 end_date = datetime.now().strftime("%Y-%m-%d")
             if not start_date:
-                # Default to 1 year of data or the maximum available
                 cur.execute(
                     """
                     SELECT MIN(timestamp) FROM StockPrices
@@ -330,12 +322,11 @@ def get_portfolio_statistics(portfolio_id, user_id, start_date=None, end_date=No
                         {"error": "No historical data available for holdings"}
                     ), 404
 
-            # Get symbols list for IN clause
+            # Get symbols list
             symbols = [h["symbol"] for h in holdings]
             symbols_str = "','".join(symbols)
 
             # Calculate statistics for each holding using SQL window functions
-            # This gets daily returns, mean, standard deviation, and coefficient of variation
             cur.execute(
                 f"""
                 WITH daily_prices AS (
@@ -589,7 +580,7 @@ def get_portfolio_statistics(portfolio_id, user_id, start_date=None, end_date=No
                 symbol = stat["symbol"]
                 stats_with_beta.append({**stat, "beta": betas.get(symbol, 0)})
 
-            # Calculate portfolio beta (weighted average)
+            # Calculate portfolio beta
             total_value = sum(holding["num_shares"] for holding in holdings)
             portfolio_beta = 0
             if total_value > 0:

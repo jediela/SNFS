@@ -5,9 +5,6 @@ from .base import get_connection
 
 
 def handle_cash_transaction(portfolio_id, transaction_type, amount):
-    """
-    Handle both deposits and withdrawals with validation
-    """
     conn = get_connection()
     try:
         if transaction_type not in ["deposit", "withdrawal"]:
@@ -65,7 +62,6 @@ def handle_cash_transaction(portfolio_id, transaction_type, amount):
                     }
                 ), 201
 
-            # If no rows affected
             error_msg = (
                 "Withdrawal failed: Insufficient funds"
                 if transaction_type == "withdrawal"
@@ -84,7 +80,7 @@ def get_cash_transactions(portfolio_id, user_id):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Verify portfolio ownership
+            # Check if user owns portfolio
             cur.execute(
                 """
                 SELECT 1 FROM Portfolios
@@ -97,7 +93,7 @@ def get_cash_transactions(portfolio_id, user_id):
             if not cur.fetchone():
                 return jsonify({"error": "Unauthorized access"}), 403
 
-            # Fetch transactions
+            # Get transactions
             cur.execute(
                 """
                 SELECT transaction_id, type, amount, timestamp 

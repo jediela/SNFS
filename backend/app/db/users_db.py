@@ -16,7 +16,7 @@ def register_user(username, password):
             user = cur.fetchone()
         conn.commit()
         if user:
-            # User registered successfully, now attempt to create a default portfolio
+            # Create default portfolio for the user
             try:
                 portfolio = create_portfolio(user["user_id"], "Portfolio 1")
                 if portfolio:

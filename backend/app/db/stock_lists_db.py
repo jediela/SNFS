@@ -43,19 +43,19 @@ def create_stock_list(user_id, name, visibility):
 def add_item_to_stock_list(list_id, symbol, num_shares):
     conn = get_connection()
     try:
-        # First check if the stock exists in the Stocks table
+        # Check if stock exists in stocks table
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT * FROM Stocks WHERE symbol = %s;", (symbol,))
             stock = cur.fetchone()
 
-            # If stock doesn't exist, add it with a generic company name
+            # Stock DNE so add
             if not stock:
                 cur.execute(
                     "INSERT INTO Stocks (symbol, company_name) VALUES (%s, %s);",
                     (symbol, f"Company {symbol}"),
                 )
 
-            # Add the stock to the list
+            # Add stock to list
             cur.execute(
                 "INSERT INTO StockListItems (list_id, symbol, num_shares) VALUES (%s, %s, %s) RETURNING *;",
                 (list_id, symbol, num_shares),
@@ -76,14 +76,10 @@ def get_accessible_stock_lists(user_id=None, search_term=None):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Base query with parameters
             params = []
 
             if user_id:
-                # Get all lists accessible to the user:
-                # 1. Lists created by the user (private, shared or public)
-                # 2. Lists shared specifically with this user
-                # 3. Public lists created by any user
+                # Get all lists accessible to the user (user created, shared with, public)
                 query = """
                     SELECT sl.*, u.username as creator_name, 
                            CASE 
@@ -99,7 +95,6 @@ def get_accessible_stock_lists(user_id=None, search_term=None):
                 """
                 params.extend([user_id, user_id, user_id, user_id])
             else:
-                # If no user_id is provided, return only public lists
                 query = """
                     SELECT sl.*, u.username as creator_name, 'public' as access_type
                     FROM StockLists sl
@@ -107,18 +102,16 @@ def get_accessible_stock_lists(user_id=None, search_term=None):
                     WHERE sl.visibility = 'public'
                 """
 
-            # Add search condition if provided
             if search_term:
                 query += " AND sl.name ILIKE %s"
                 params.append(f"%{search_term}%")
 
             query += " ORDER BY sl.list_id DESC;"
 
-            # Execute the query with parameters
             cur.execute(query, params)
             lists = cur.fetchall()
 
-            # For each list, get its items
+            # For each list get items
             for stock_list in lists:
                 cur.execute(
                     """
@@ -140,7 +133,6 @@ def get_accessible_stock_lists(user_id=None, search_term=None):
 
 
 def verify_user_owns_list(user_id, list_id):
-    """Verify that a user owns a specific stock list"""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -157,11 +149,10 @@ def verify_user_owns_list(user_id, list_id):
 
 
 def delete_stock_list(list_id, user_id):
-    """Delete a stock list if it belongs to the user"""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            # First check if the list belongs to the user
+            # Check if the list belongs to user
             cur.execute(
                 "SELECT EXISTS(SELECT 1 FROM StockLists WHERE list_id = %s AND user_id = %s)",
                 (list_id, user_id),
@@ -175,11 +166,11 @@ def delete_stock_list(list_id, user_id):
                     }
                 ), 403
 
-            # First explicitly delete all stock items in this list
+            # Delete all stock items in list
             cur.execute("DELETE FROM StockListItems WHERE list_id = %s", (list_id,))
             items_deleted = cur.rowcount
 
-            # Then delete the list itself
+            # Delete the list
             cur.execute(
                 "DELETE FROM StockLists WHERE list_id = %s AND user_id = %s",
                 (list_id, user_id),
@@ -194,18 +185,17 @@ def delete_stock_list(list_id, user_id):
                 }
             ), 200
     except psycopg2.Error as e:
-        conn.rollback()  # Add rollback to ensure atomicity
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
 
 
 def get_stock_list_by_id(list_id, user_id=None):
-    """Get a single stock list by ID if the user has access to it"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # First check if the list exists
+            # Check if the list exists
             cur.execute(
                 """
                 SELECT sl.*, u.username as creator_name
@@ -220,18 +210,16 @@ def get_stock_list_by_id(list_id, user_id=None):
             if not stock_list:
                 return jsonify({"error": "Stock list not found"}), 404
 
-            # Check if the user has access
+            # Check if user has access
             has_access = False
 
-            # Lists are accessible if they're public
+            # Public = accessible
             if stock_list["visibility"] == "public":
                 has_access = True
-            # If user_id is provided, check for ownership or shared access
+            # Check for ownership or shared access
             elif user_id:
-                # User owns the list
                 if stock_list["user_id"] == user_id:
                     has_access = True
-                # List is shared with the user
                 elif stock_list["visibility"] == "shared":
                     cur.execute(
                         "SELECT EXISTS(SELECT 1 FROM SharedLists WHERE list_id = %s AND shared_user = %s)",
@@ -266,7 +254,6 @@ def get_stock_list_by_id(list_id, user_id=None):
 
 
 def update_stock_list(list_id, user_id, name, visibility):
-    """Update a stock list's name and visibility"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -300,7 +287,6 @@ def update_stock_list(list_id, user_id, name, visibility):
 
 
 def remove_item_from_stock_list(list_id, symbol):
-    """Remove an item from a stock list"""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -344,7 +330,7 @@ def share_stock_list(owner_id, list_id, receiver_id):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            # Check if the stock list exists and is owned by the owner_id
+            # Check if stock list exists is owned by owner_id
             cur.execute(
                 """
                 SELECT 1 FROM StockLists 
@@ -363,7 +349,7 @@ def share_stock_list(owner_id, list_id, receiver_id):
             if owner_id == receiver_id:
                 return jsonify({"error": "You cannot share with yourself"}), 400
 
-            # Check if they are friends
+            # Friendship check
             user1, user2 = sorted([owner_id, receiver_id])
             cur.execute(
                 """
@@ -375,7 +361,7 @@ def share_stock_list(owner_id, list_id, receiver_id):
             if not cur.fetchone():
                 return jsonify({"error": "You can only share with friends"}), 403
 
-            # Insert into SharedLists if not already there
+            # Insert into SharedLists
             cur.execute(
                 """
                 INSERT INTO SharedLists (list_id, shared_user)
@@ -395,11 +381,10 @@ def share_stock_list(owner_id, list_id, receiver_id):
 
 
 def get_stocklist_statistics(list_id, user_id, start_date=None, end_date=None):
-    """Calculate statistics for a stock list: beta, CoV, correlation matrix"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Check access (owned, shared, or public)
+            # Check access (owned, shared, public)
             if user_id is not None:
                 cur.execute(
                     """
@@ -509,7 +494,7 @@ def get_stocklist_statistics(list_id, user_id, start_date=None, end_date=None):
 
             stock_stats = cur.fetchall()
 
-            # 5. Market returns for beta (NVDA proxy)
+            # Market returns for beta (NVDA proxy)
             market_symbol = "NVDA"
             cur.execute(
                 """
@@ -529,7 +514,7 @@ def get_stocklist_statistics(list_id, user_id, start_date=None, end_date=None):
                 r["timestamp"]: r["market_return"] for r in cur.fetchall()
             }
 
-            # 6. Beta for each stock
+            # Beta for each stock
             betas = {}
             for symbol in symbols:
                 cur.execute(
@@ -564,7 +549,7 @@ def get_stocklist_statistics(list_id, user_id, start_date=None, end_date=None):
                 else:
                     betas[symbol] = 0
 
-            # 7. Correlation matrix
+            # Correlation matrix
             correlation_matrix = []
             for symbol1 in symbols:
                 correlations = {}
@@ -611,7 +596,7 @@ def get_stocklist_statistics(list_id, user_id, start_date=None, end_date=None):
                     {"symbol": symbol1, "correlations": correlations}
                 )
 
-            # 8. Add beta to stats and compute list beta
+            # Add beta to stats and compute list beta
             total_shares = sum(h["num_shares"] for h in holdings)
             enriched_stats = []
             for stat in stock_stats:

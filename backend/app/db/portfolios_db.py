@@ -89,7 +89,7 @@ def transfer_funds(from_id, to_id, amount):
             if from_balance < amount:
                 return jsonify({"error": "Insufficient funds in source portfolio"}), 400
 
-            # Perform the transfer
+            # Transfer money
             cur.execute(
                 "UPDATE Portfolios SET balance = balance - %s WHERE portfolio_id = %s",
                 (amount, from_id),

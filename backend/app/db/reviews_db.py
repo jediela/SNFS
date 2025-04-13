@@ -6,11 +6,10 @@ from .stock_lists_db import verify_user_owns_list
 
 
 def can_access_list(user_id, list_id):
-    """Check if a user can access a stock list"""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            # Check if the list is public
+            # Check if list is public
             cur.execute(
                 "SELECT visibility FROM StockLists WHERE list_id = %s", (list_id,)
             )
@@ -21,11 +20,11 @@ def can_access_list(user_id, list_id):
 
             visibility = list_info[0]
 
-            # If list is public, anyone can access
+            # If public anyone can access
             if visibility == "public":
                 return True
 
-            # Check if user owns the list
+            # Check if user owns list
             cur.execute(
                 "SELECT EXISTS(SELECT 1 FROM StockLists WHERE list_id = %s AND user_id = %s)",
                 (list_id, user_id),
@@ -33,7 +32,7 @@ def can_access_list(user_id, list_id):
             if cur.fetchone()[0]:
                 return True
 
-            # If shared, check if shared with this user
+            # If shared check if shared with user
             if visibility == "shared":
                 cur.execute(
                     "SELECT EXISTS(SELECT 1 FROM SharedLists WHERE list_id = %s AND shared_user = %s)",
@@ -49,17 +48,16 @@ def can_access_list(user_id, list_id):
 
 
 def add_review(user_id, list_id, content):
-    """Add a review for a stock list"""
     conn = get_connection()
     try:
-        # First check if the list is accessible to the user
+        # Check if list is accessible to user
         if not can_access_list(user_id, list_id):
             return jsonify(
                 {"error": "You don't have permission to review this list"}
             ), 403
 
         with conn.cursor() as check_cur:
-            # Check if user already has a review for this list
+            # Check if user already has a review for list
             check_cur.execute(
                 "SELECT EXISTS(SELECT 1 FROM Reviews WHERE user_id = %s AND list_id = %s)",
                 (user_id, list_id),
@@ -74,14 +72,14 @@ def add_review(user_id, list_id, content):
             ), 400
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Add the review
+            # Add review
             cur.execute(
                 "INSERT INTO Reviews (user_id, list_id, content) VALUES (%s, %s, %s) RETURNING *;",
                 (user_id, list_id, content),
             )
             review = cur.fetchone()
 
-            # Get username for response
+            # Get username
             cur.execute("SELECT username FROM Users WHERE user_id = %s", (user_id,))
             username = cur.fetchone()["username"]
 
@@ -99,11 +97,10 @@ def add_review(user_id, list_id, content):
 
 
 def update_review(review_id, user_id, content):
-    """Update an existing review"""
     conn = get_connection()
     try:
         with conn.cursor() as check_cur:
-            # Check if review exists and belongs to the user
+            # Check if review exists and belongs to user
             check_cur.execute(
                 "SELECT EXISTS(SELECT 1 FROM Reviews WHERE review_id = %s AND user_id = %s)",
                 (review_id, user_id),
@@ -116,7 +113,7 @@ def update_review(review_id, user_id, content):
             ), 403
 
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Update the review
+            # Update review
             cur.execute(
                 "UPDATE Reviews SET content = %s WHERE review_id = %s RETURNING *;",
                 (content, review_id),
@@ -134,7 +131,6 @@ def update_review(review_id, user_id, content):
 
 
 def delete_review(review_id, user_id):
-    """Delete a review if it belongs to the user"""
     conn = get_connection()
     try:
         with conn.cursor() as check_cur:
@@ -171,11 +167,10 @@ def delete_review(review_id, user_id):
 
 
 def get_reviews_for_list(list_id, user_id=None):
-    """Get all reviews for a stock list"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # First get the stock list to check visibility
+            # Get stock list to check visibility
             cur.execute(
                 """
                 SELECT sl.*, u.username as creator_name
@@ -190,12 +185,10 @@ def get_reviews_for_list(list_id, user_id=None):
             if not stock_list:
                 return jsonify({"error": "Stock list not found"}), 404
 
-            # Initialize reviews as an empty array by default
             reviews = []
 
-            # For public lists, everyone can see reviews
+            # Public lists 
             if stock_list["visibility"] == "public":
-                # Get reviews with usernames
                 cur.execute(
                     """
                     SELECT r.*, u.username 
@@ -206,10 +199,10 @@ def get_reviews_for_list(list_id, user_id=None):
                     """,
                     (list_id,),
                 )
-                reviews = cur.fetchall() or []  # Ensure it's never None
+                reviews = cur.fetchall() or []
                 return jsonify({"reviews": reviews, "stockList": stock_list}), 200
 
-            # For non-public lists, check if user has access
+            # Not public lists so check if user has access
             if not user_id:
                 return jsonify(
                     {"error": "User ID required to view reviews for non-public lists"}
@@ -223,7 +216,7 @@ def get_reviews_for_list(list_id, user_id=None):
                     {"error": "You don't have permission to view reviews for this list"}
                 ), 403
 
-            # User has access, return reviews
+            # User has access so return reviews
             cur.execute(
                 """
                 SELECT r.*, u.username 
@@ -234,7 +227,7 @@ def get_reviews_for_list(list_id, user_id=None):
                 """,
                 (list_id,),
             )
-            reviews = cur.fetchall() or []  # Ensure it's never None
+            reviews = cur.fetchall() or []
             return jsonify({"reviews": reviews, "stockList": stock_list}), 200
     except psycopg2.Error as e:
         return jsonify({"error": str(e), "reviews": [], "stockList": None}), 500
@@ -243,11 +236,10 @@ def get_reviews_for_list(list_id, user_id=None):
 
 
 def get_user_reviews(user_id):
-    """Get all reviews created by a specific user"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Get reviews with stock list info
+            # Reviews with stock list info
             cur.execute(
                 """
                 SELECT r.*, sl.name as list_name, sl.visibility, u.username as creator_name
@@ -259,7 +251,7 @@ def get_user_reviews(user_id):
                 """,
                 (user_id,),
             )
-            reviews = cur.fetchall() or []  # Ensure it's never None
+            reviews = cur.fetchall() or []
             return jsonify({"reviews": reviews}), 200
     except psycopg2.Error as e:
         return jsonify({"error": str(e), "reviews": []}), 500

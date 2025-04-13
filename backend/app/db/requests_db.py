@@ -69,7 +69,7 @@ def send_request(senderId, receiverId):
             if cur.fetchone():
                 return jsonify({"error": "A friend request is already pending"}), 400
 
-            # Check for recently rejected/deleted request
+            # Check for recently rejected request
             cur.execute(
                 """
                 SELECT status, timestamp FROM FriendRequests
@@ -81,7 +81,7 @@ def send_request(senderId, receiverId):
                 (senderId, receiverId, receiverId, senderId),
             )
             recent = cur.fetchone()
-            if recent and recent["status"] in ["rejected", "deleted"]:
+            if recent and recent["status"] in ["rejected"]:
                 time_diff = datetime.utcnow() - recent["timestamp"]
                 if time_diff.total_seconds() < 300:
                     return jsonify(
@@ -194,7 +194,6 @@ def get_received_requests(user_id):
             )
             requests = cur.fetchall()
 
-            # Format datetime and simplify response
             formatted_requests = [
                 {
                     **req,
@@ -207,7 +206,6 @@ def get_received_requests(user_id):
                 for req in requests
             ]
 
-            # Remove temporary fields
             for req in formatted_requests:
                 del req["sender_id"]
                 del req["sender_username"]
