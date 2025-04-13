@@ -30,7 +30,10 @@ def view_user_portfolios(user_id):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM Portfolios WHERE user_id = %s ORDER BY portfolio_id ASC;", (user_id,))
+            cur.execute(
+                "SELECT * FROM Portfolios WHERE user_id = %s ORDER BY portfolio_id ASC;",
+                (user_id,),
+            )
             portfolios = cur.fetchall()
         if portfolios:
             return jsonify({"portfolios": portfolios}), 200
@@ -48,7 +51,7 @@ def get_portfolio_by_id(portfolio_id, user_id):
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 "SELECT * FROM Portfolios WHERE portfolio_id = %s AND user_id = %s;",
-                (portfolio_id, user_id)
+                (portfolio_id, user_id),
             )
             portfolio = cur.fetchone()
         if portfolio:
@@ -65,37 +68,43 @@ def transfer_funds(from_id, to_id, amount):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # 1. Check if both portfolios exist
-            cur.execute("SELECT balance FROM Portfolios WHERE portfolio_id = %s", (from_id,))
+            # Check if both portfolios exist
+            cur.execute(
+                "SELECT balance FROM Portfolios WHERE portfolio_id = %s", (from_id,)
+            )
             from_portfolio = cur.fetchone()
             if not from_portfolio:
                 return jsonify({"error": "Source portfolio not found"}), 404
 
-            cur.execute("SELECT balance FROM Portfolios WHERE portfolio_id = %s", (to_id,))
+            cur.execute(
+                "SELECT balance FROM Portfolios WHERE portfolio_id = %s", (to_id,)
+            )
             to_portfolio = cur.fetchone()
             if not to_portfolio:
                 return jsonify({"error": "Target portfolio not found"}), 404
 
-            from_balance = float(from_portfolio['balance'])
+            from_balance = float(from_portfolio["balance"])
 
-            # 2. Check sufficient funds
+            # Check sufficient funds
             if from_balance < amount:
                 return jsonify({"error": "Insufficient funds in source portfolio"}), 400
 
-            # 3. Perform the transfer
+            # Transfer money
             cur.execute(
                 "UPDATE Portfolios SET balance = balance - %s WHERE portfolio_id = %s",
-                (amount, from_id)
+                (amount, from_id),
             )
             cur.execute(
                 "UPDATE Portfolios SET balance = balance + %s WHERE portfolio_id = %s",
-                (amount, to_id)
+                (amount, to_id),
             )
 
         conn.commit()
-        return jsonify({
-            "message": f"Transferred ${amount:.2f} from portfolio {from_id} to portfolio {to_id}"
-        }), 200
+        return jsonify(
+            {
+                "message": f"Transferred ${amount:.2f} from portfolio {from_id} to portfolio {to_id}"
+            }
+        ), 200
 
     except psycopg2.Error as e:
         conn.rollback()

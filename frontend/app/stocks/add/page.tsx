@@ -35,7 +35,6 @@ export default function AddStockData() {
     const MIN_DATE = '2018-02-08';
     const today = new Date().toISOString().split('T')[0];
 
-    // Check for logged in user
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -43,7 +42,7 @@ export default function AddStockData() {
         }
     }, []);
 
-    // Fetch available symbols for autocomplete
+    // Available symbols for autocomplete
     useEffect(() => {
         async function fetchSymbols() {
             try {
@@ -65,7 +64,6 @@ export default function AddStockData() {
         }
     }, [symbolSearch]);
 
-    // Update high/low when open/close changes for better UX
     useEffect(() => {
         if (open && !high) {
             setHigh(open);
@@ -75,7 +73,6 @@ export default function AddStockData() {
         }
     }, [open, close, high, low]);
 
-    // Validate date is within allowed range
     const validateDate = (dateStr: string) => {
         if (!dateStr) return false;
 
@@ -90,7 +87,6 @@ export default function AddStockData() {
         return true;
     };
 
-    // Handle form submission
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
@@ -99,25 +95,21 @@ export default function AddStockData() {
             return;
         }
 
-        // Basic validation
         if (!symbol || !date || !close || !volume) {
             toast.error('Symbol, date, close price, and volume are required');
             return;
         }
 
-        // Date validation
         if (!validateDate(date)) {
             return;
         }
 
-        // Ensure numerical values are valid
         const numOpen = open ? parseFloat(open) : null;
         const numHigh = high ? parseFloat(high) : null;
         const numLow = low ? parseFloat(low) : null;
         const numClose = parseFloat(close);
         const numVolume = parseInt(volume, 10);
 
-        // Additional validation for price values
         if (
             (numOpen !== null && isNaN(numOpen)) ||
             (numHigh !== null && isNaN(numHigh)) ||
@@ -129,7 +121,6 @@ export default function AddStockData() {
             return;
         }
 
-        // Check if high is higher than low
         if (numHigh !== null && numLow !== null && numHigh < numLow) {
             toast.error('High price must be greater than low price');
             return;
@@ -165,7 +156,6 @@ export default function AddStockData() {
                 description: `Added ${symbol.toUpperCase()} data for ${date}`,
             });
 
-            // Clear the form
             setSymbol('');
             setDate('');
             setOpen('');
@@ -173,10 +163,8 @@ export default function AddStockData() {
             setLow('');
             setClose('');
             setVolume('');
-        } catch (error) {
-            toast.error(
-                error instanceof Error ? error.message : 'An error occurred'
-            );
+        } catch {
+            toast.error('An error occurred');
         } finally {
             setIsSubmitting(false);
         }

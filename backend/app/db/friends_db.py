@@ -3,11 +3,13 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from .base import get_connection
 
+
 def get_users_friends(user_id):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
                     u.user_id AS friend_id,
                     u.username,
@@ -19,7 +21,9 @@ def get_users_friends(user_id):
                     ELSE f.user1_id
                   END
                 WHERE f.user1_id = %s OR f.user2_id = %s;
-            """, (user_id, user_id, user_id))
+            """,
+                (user_id, user_id, user_id),
+            )
             friends = cur.fetchall()
 
         return jsonify({"friends": friends}), 200
@@ -33,13 +37,15 @@ def remove_friend(user_id, friend_id):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            user1_id, user2_id = (user_id, friend_id) if user_id < friend_id else (friend_id, user_id)
+            user1_id, user2_id = (
+                (user_id, friend_id) if user_id < friend_id else (friend_id, user_id)
+            )
             cur.execute(
                 """
                 DELETE FROM Friends
                 WHERE user1_id = %s AND user2_id = %s;
                 """,
-                (user1_id, user2_id)
+                (user1_id, user2_id),
             )
         conn.commit()
         return jsonify({"message": "Friendship removed successfully"}), 200

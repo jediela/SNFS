@@ -32,7 +32,6 @@ import {
     Legend,
 } from 'chart.js';
 
-// Register ChartJS components
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -133,14 +132,13 @@ export default function ViewStocks() {
         if (!id || !user) return;
         setLoading(true);
         try {
-            // Get portfolio basic info
+            // Portfolio data
             const portfolioRes = await fetch(
                 `http://localhost:8000/portfolios/${id}?userId=${user.user_id}`,
                 { method: 'GET' }
             );
             const portfolioData = await portfolioRes.json();
 
-            // Make sure balance is a number
             if (portfolioData.portfolio) {
                 portfolioData.portfolio.balance = Number(
                     portfolioData.portfolio.balance
@@ -149,14 +147,13 @@ export default function ViewStocks() {
 
             setPortfolio(portfolioData.portfolio);
 
-            // Get portfolio holdings
+            // Portfolio holdings
             const holdingsRes = await fetch(
                 `http://localhost:8000/portfolios/${id}/holdings?user_id=${user.user_id}`,
                 { method: 'GET' }
             );
             const holdingsData = await holdingsRes.json();
             if (holdingsRes.ok && holdingsData.holdings) {
-                // Ensure all numeric values are actually numbers
                 const parsedHoldings = holdingsData.holdings.map(
                     (holding: HoldingData) => ({
                         ...holding,
@@ -172,14 +169,13 @@ export default function ViewStocks() {
                 setHoldings(parsedHoldings);
             }
 
-            // Get stock transactions
+            // Stock transactions
             const transactionsRes = await fetch(
                 `http://localhost:8000/portfolios/${id}/stock-transactions?user_id=${user.user_id}`,
                 { method: 'GET' }
             );
             const transactionsData = await transactionsRes.json();
             if (transactionsRes.ok && transactionsData.transactions) {
-                // Ensure all numeric values are actually numbers
                 const parsedTransactions = transactionsData.transactions.map(
                     (txn: TransactionData) => ({
                         ...txn,
@@ -197,7 +193,7 @@ export default function ViewStocks() {
         }
     }, [id, user]);
 
-    // Fetch portfolio statistics
+    // Portfolio statistics
     const fetchPortfolioStatistics = useCallback(async () => {
         if (!id || !user || holdings.length === 0) return;
 
@@ -255,17 +251,14 @@ export default function ViewStocks() {
         );
     };
 
-    // Navigate to stock view page with pre-selected symbol
     const viewStockHistory = (symbol: string) => {
         router.push(`/stocks/view?symbol=${symbol}`);
     };
 
-    // Navigate to stock predictions page with pre-selected symbol
     const viewStockPredictions = (symbol: string) => {
         router.push(`/stocks/view?symbol=${symbol}&tab=prediction`);
     };
 
-    // Format a correlation value with color coding
     const formatCorrelation = (value: number) => {
         let color = 'text-gray-600';
         if (value > 0.7) color = 'text-red-600';
@@ -276,7 +269,6 @@ export default function ViewStocks() {
         return <span className={color}>{value.toFixed(2)}</span>;
     };
 
-    // Format a beta value with color coding
     const formatBeta = (value: number) => {
         let color = 'text-gray-600';
         if (value > 1.5) color = 'text-red-600';
@@ -287,7 +279,6 @@ export default function ViewStocks() {
         return <span className={color}>{value.toFixed(2)}</span>;
     };
 
-    // Format COV with color coding
     const formatCOV = (value: number | null) => {
         if (value === null) return 'N/A';
 
@@ -333,7 +324,7 @@ export default function ViewStocks() {
                 </span>
             </div>
 
-            {/* Portfolio Summary - Modified to remove Beta card */}
+            {/* Portfolio Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <Card>
                     <CardHeader className="pb-2">
@@ -386,7 +377,6 @@ export default function ViewStocks() {
                 </Button>
             </div>
 
-            {/* Tabs for different views */}
             <Tabs
                 defaultValue="holdings"
                 value={activeTab}

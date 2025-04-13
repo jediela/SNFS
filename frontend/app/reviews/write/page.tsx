@@ -32,7 +32,6 @@ function WriteReviewForm() {
     const checkedListsRef = useRef<Set<string>>(new Set());
     const isFirstRenderRef = useRef(true);
 
-    // Define checkStockListExistence with useCallback
     const checkStockListExistence = useCallback(
         async (idToCheck = listId) => {
             if (!idToCheck || !user) {
@@ -40,7 +39,6 @@ function WriteReviewForm() {
                 return;
             }
 
-            // Skip if we're already checking or we've checked this list in this session
             const cacheKey = `${idToCheck}-${user.user_id}`;
             if (isCheckingList || checkedListsRef.current.has(cacheKey)) {
                 return;
@@ -57,11 +55,9 @@ function WriteReviewForm() {
                     toast.error(data.error || 'Failed to fetch stock list');
                     setListExists(false);
                     setStockListName('');
-                    // Don't add to checked lists on error so user can retry
                     return;
                 }
 
-                // Mark this list as checked
                 checkedListsRef.current.add(cacheKey);
 
                 setListExists(true);
@@ -76,9 +72,8 @@ function WriteReviewForm() {
             }
         },
         [listId, user, isCheckingList]
-    ); // Add isCheckingList to dependencies
+    );
 
-    // Make checkListDirectly function a memoized function with useCallback
     const checkListDirectly = useCallback(
         async (id: string, userData: { user_id: number; username: string }) => {
             if (isCheckingList) return;
@@ -113,12 +108,11 @@ function WriteReviewForm() {
             }
         },
         [isCheckingList]
-    ); // Add isCheckingList as a dependency
+    );
 
-    // Check for logged in user and URL params on mount
     useEffect(() => {
         if (!isFirstRenderRef.current) {
-            return; // Skip effect after first render
+            return;
         }
 
         const storedUser = localStorage.getItem('user');
@@ -128,16 +122,13 @@ function WriteReviewForm() {
             toast.error('Please log in to write reviews');
         }
 
-        // Get list_id from URL if present
         const listIdParam = searchParams.get('list_id');
         if (listIdParam) {
             setListId(listIdParam);
 
-            // Auto-check the list existence if we have a user - with slight delay to ensure user is set
             if (storedUser) {
                 const timer = setTimeout(() => {
                     const userData = JSON.parse(storedUser);
-                    // Do direct API call here instead of using the callback to avoid dependency issues
                     checkListDirectly(listIdParam, userData);
                 }, 100);
 
@@ -146,9 +137,8 @@ function WriteReviewForm() {
         }
 
         isFirstRenderRef.current = false;
-    }, [searchParams, checkListDirectly]); // Add checkListDirectly to dependencies
+    }, [searchParams, checkListDirectly]);
 
-    // Reset check status when list ID changes
     useEffect(() => {
         if (listId) {
             setListExists(false);
@@ -198,7 +188,6 @@ function WriteReviewForm() {
 
             toast.success('Review submitted successfully');
 
-            // Go back to the view reviews page
             router.push(`/reviews/view?list_id=${listId}`);
         } catch (error) {
             toast.error(String(error));
@@ -207,9 +196,7 @@ function WriteReviewForm() {
         }
     }
 
-    // Use this handler instead of directly calling checkStockListExistence to reset the cache
     function handleCheckListClick() {
-        // Reset the cache for this list ID so we can check again
         if (user) {
             const cacheKey = `${listId}-${user.user_id}`;
             checkedListsRef.current.delete(cacheKey);

@@ -2,16 +2,14 @@ from flask import jsonify
 from psycopg2.extras import RealDictCursor
 from .base import get_connection
 from datetime import datetime, timedelta
+import random
 
 def create_stock_table():
-    """Create the StockPrices table if it doesn't exist"""
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Drop the existing table if it exists since we need to change column constraints
         cursor.execute("DROP TABLE IF EXISTS StockPrices")
-        
-        # Create the table with NULL allowed for some columns
+
         cursor.execute("""
             CREATE TABLE StockPrices(
                 timestamp DATE, 
@@ -24,20 +22,23 @@ def create_stock_table():
                 PRIMARY KEY(symbol, timestamp)
             )
         """)
-        
-        # Create indexes for efficient querying
+
+        # Indexes for efficient querying
         cursor.execute("""
             CREATE INDEX idx_stockprices_symbol 
             ON StockPrices(symbol)
         """)
-        
+
         cursor.execute("""
             CREATE INDEX idx_stockprices_timestamp 
             ON StockPrices(timestamp)
         """)
-        
+
         conn.commit()
-        return {"success": True, "message": "Stock table created with NULL allowed columns"}
+        return {
+            "success": True,
+            "message": "Stock table created with NULL allowed columns",
+        }
     except Exception as e:
         conn.rollback()
         return {"success": False, "message": f"Error creating table: {str(e)}"}
@@ -45,29 +46,23 @@ def create_stock_table():
         cursor.close()
         conn.close()
 
+
 def load_stock_csv():
-    """Load the SP500History.csv file into StockPrices table"""
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # First create table if it doesn't exist
         create_stock_table()
-        
-        # Clear existing data
         cursor.execute("DELETE FROM StockPrices")
-        
-        # Load the CSV file
         cursor.execute("""
             COPY StockPrices(timestamp, open, high, low, close, volume, symbol) 
             FROM '/data/SP500History.csv' 
             DELIMITER ',' 
             CSV HEADER
         """)
-        
-        # Get count of loaded records
+
         cursor.execute("SELECT COUNT(*) FROM StockPrices")
         count = cursor.fetchone()[0]
-        
+
         conn.commit()
         return {"success": True, "message": f"Successfully loaded {count} records"}
     except Exception as e:
@@ -77,8 +72,8 @@ def load_stock_csv():
         cursor.close()
         conn.close()
 
+
 def check_stock_data_exists():
-    """Check if any stock data already exists in the table"""
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -90,32 +85,31 @@ def check_stock_data_exists():
     finally:
         conn.close()
 
+
 def get_stock_data(symbol="", start_date="", end_date="", page=1, per_page=20):
-    """Get paginated stock data with optional filtering"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Build the query with filters
             query = "SELECT * FROM StockPrices WHERE 1=1"
             count_query = "SELECT COUNT(*) FROM StockPrices WHERE 1=1"
             params = []
-            
+
             if symbol:
                 query += " AND symbol = %s"
                 count_query += " AND symbol = %s"
                 params.append(symbol)
-                
+
             if start_date:
                 query += " AND timestamp >= %s"
                 count_query += " AND timestamp >= %s"
                 params.append(start_date)
-                
+
             if end_date:
                 query += " AND timestamp <= %s"
                 count_query += " AND timestamp <= %s"
                 params.append(end_date)
-                
-            # If no filters, return the most traded stocks by volume as default
+
+            # Default return most traded stocks by volume
             if not (symbol or start_date or end_date):
                 query = """
                     SELECT * FROM (
@@ -128,41 +122,42 @@ def get_stock_data(symbol="", start_date="", end_date="", page=1, per_page=20):
             else:
                 # Order by timestamp (ascending) for charts
                 query += " ORDER BY timestamp ASC, symbol ASC"
-            
-            # Add pagination
+
+            # Pagination
             query += " LIMIT %s OFFSET %s"
             offset = (page - 1) * per_page
             params.extend([per_page, offset])
-            
+
             # Execute query
             cur.execute(query, params)
             stocks = cur.fetchall()
-            
-            # Get total count for pagination if filters are applied
+
             total_items = per_page
             total_pages = 1
-            
+
             if symbol or start_date or end_date:
                 cur.execute(count_query, params[:-2])
                 total_items = cur.fetchone()["count"]
                 total_pages = (total_items + per_page - 1) // per_page
-                
-            return jsonify({
-                "stocks": stocks,
-                "pagination": {
-                    "page": page,
-                    "per_page": per_page,
-                    "total_items": total_items,
-                    "total_pages": total_pages
+
+            return jsonify(
+                {
+                    "stocks": stocks,
+                    "pagination": {
+                        "page": page,
+                        "per_page": per_page,
+                        "total_items": total_items,
+                        "total_pages": total_pages,
+                    },
                 }
-            })
+            )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
 
+
 def get_stock_symbols(search="", limit=100):
-    """Get list of available stock symbols with optional search"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -171,154 +166,161 @@ def get_stock_symbols(search="", limit=100):
                 FROM StockPrices
             """
             params = []
-            
+
             if search:
                 query += " WHERE symbol ILIKE %s"
                 params.append(f"%{search}%")
-                
+
             query += " ORDER BY symbol LIMIT %s"
             params.append(limit)
-            
+
             cur.execute(query, params)
             symbols = [row["symbol"] for row in cur.fetchall()]
-            
+
             return jsonify({"symbols": symbols})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
 
+
 def predict_stock_prices(symbol, days_to_predict=30):
-    """Predict future stock prices using A-Priori Optimization"""
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Get historical data for the specified symbol
-            # Order by date ascending to get proper time series
             cur.execute(
                 """
                 SELECT timestamp, close 
                 FROM StockPrices 
                 WHERE symbol = %s
                 ORDER BY timestamp ASC
-                """, 
-                (symbol,)
+                """,
+                (symbol,),
             )
-            
+
             historical_data = cur.fetchall()
-            
+
             if not historical_data:
                 return jsonify({"error": f"No historical data found for {symbol}"}), 404
-            
+
             # Extract close prices for prediction
-            prices = [float(item['close']) for item in historical_data]
-            dates = [item['timestamp'] for item in historical_data]
-            
+            prices = [float(item["close"]) for item in historical_data]
+            dates = [item["timestamp"] for item in historical_data]
+
             # A-Priori Optimization algorithm
             if len(prices) < 20:
                 return jsonify({"error": "Insufficient data for prediction"}), 400
-                
-            # Calculate statistical properties for more realistic predictions
+
+            # Calculate statistical properties
             mean_price = sum(prices) / len(prices)
             last_price = prices[-1]
-            
-            # Calculate historical volatility (standard deviation of returns)
-            returns = [prices[i]/prices[i-1] - 1 for i in range(1, len(prices))]
+
+            # Calculate historical volatility
+            returns = [prices[i] / prices[i - 1] - 1 for i in range(1, len(prices))]
             mean_return = sum(returns) / len(returns)
-            volatility = (sum((r - mean_return) ** 2 for r in returns) / len(returns)) ** 0.5
-            
-            # Mean reversion factor - stronger for more volatile stocks
+            volatility = (
+                sum((r - mean_return) ** 2 for r in returns) / len(returns)
+            ) ** 0.5
+
+            # Mean reversion factor
             gamma = min(0.3, volatility * 2)
-            
+
             # Calculate trend based on recent data (last 5-10 days)
             lookback = min(10, len(prices) - 1)
             short_term_trend = (prices[-1] - prices[-lookback]) / lookback
-            
-            # Calculate long-term trend for stability
-            long_term_trend = (prices[-1] - prices[0]) / (len(prices) - 1) 
-            
+
+            # Calculate long-term trend
+            long_term_trend = (prices[-1] - prices[0]) / (len(prices) - 1)
+
             # Blend short and long term trends based on volatility
-            # More volatile stocks rely more on mean reversion than trend
             trend_weight = max(0.3, 1.0 - volatility * 3)
-            trend = trend_weight * short_term_trend + (1 - trend_weight) * long_term_trend
-            
+            trend = (
+                trend_weight * short_term_trend + (1 - trend_weight) * long_term_trend
+            )
+
             # Ensure minimal trend if close to zero (avoid complete flatline)
             if abs(trend) < 0.001 * last_price:
                 trend = (0.001 * last_price) * (1 if trend >= 0 else -1)
-            
+
             # Generate predictions
             last_date = dates[-1]
             predictions = []
             current_price = last_price
-            
-            # Import random for adding noise
-            import random
+
             # Use combination of symbol and days to ensure consistent predictions for same parameters
             random.seed(hash(symbol) + days_to_predict)
-            
+
             for i in range(1, days_to_predict + 1):
-                # Apply mean reversion effect (stronger for more extreme prices)
+                # Apply mean reversion effect
                 deviation_from_mean = (current_price - mean_price) / mean_price
-                mean_reversion = gamma * mean_price * deviation_from_mean * abs(deviation_from_mean)
-                
+                mean_reversion = (
+                    gamma * mean_price * deviation_from_mean * abs(deviation_from_mean)
+                )
+
                 # Calculate next price with volatility-scaled noise
                 noise_scale = volatility * current_price * 0.5
                 noise = random.normalvariate(0, noise_scale)
-                
+
                 # Combine factors to predict next price
                 next_price = current_price + trend - mean_reversion + noise
-                
+
                 # Ensure price doesn't go negative
                 next_price = max(0.01, next_price)
-                
+
                 # Dampen extreme moves based on historical volatility
                 max_daily_move = max(0.1, volatility * 2) * current_price
                 if next_price > current_price + max_daily_move:
                     next_price = current_price + max_daily_move
                 elif next_price < current_price - max_daily_move:
                     next_price = current_price - max_daily_move
-                
+
                 # Update price for next iteration
                 current_price = next_price
-                
-                # Slightly adjust trend with each step to avoid straight lines
+
+                # Slightly adjust trend to avoid straight lines
                 trend = 0.95 * trend + 0.05 * mean_return * current_price
-                
-                # Calculate the next date
-                next_date = (datetime.strptime(str(last_date), '%Y-%m-%d') + 
-                            timedelta(days=i)).strftime('%Y-%m-%d')
-                
-                predictions.append({
-                    "timestamp": next_date,
-                    "predicted_close": round(next_price, 2),
-                    "symbol": symbol
-                })
-            
-            return jsonify({
-                "symbol": symbol,
-                "predictions": predictions,
-                "method": "A-Priori Optimization with Mean Reversion and Volatility Scaling"
-            })
-            
+
+                # Calculate next date
+                next_date = (
+                    datetime.strptime(str(last_date), "%Y-%m-%d") + timedelta(days=i)
+                ).strftime("%Y-%m-%d")
+
+                predictions.append(
+                    {
+                        "timestamp": next_date,
+                        "predicted_close": round(next_price, 2),
+                        "symbol": symbol,
+                    }
+                )
+
+            return jsonify(
+                {
+                    "symbol": symbol,
+                    "predictions": predictions,
+                    "method": "A-Priori Optimization with Mean Reversion and Volatility Scaling",
+                }
+            )
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
 
-def add_custom_stock_data(user_id, symbol, timestamp, open_price, high, low, close, volume):
-    """Add or update custom stock price data"""
+
+def add_custom_stock_data(
+    symbol, timestamp, open_price, high, low, close, volume
+):
     conn = get_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # First check if this entry already exists
+            # Check if this entry already exists
             cur.execute(
                 "SELECT * FROM StockPrices WHERE symbol = %s AND timestamp = %s",
-                (symbol, timestamp)
+                (symbol, timestamp),
             )
             existing_entry = cur.fetchone()
-            
+
             if existing_entry:
-                # Update existing entry
                 cur.execute(
                     """
                     UPDATE StockPrices 
@@ -326,33 +328,33 @@ def add_custom_stock_data(user_id, symbol, timestamp, open_price, high, low, clo
                     WHERE symbol = %s AND timestamp = %s
                     RETURNING *
                     """,
-                    (open_price, high, low, close, volume, symbol, timestamp)
+                    (open_price, high, low, close, volume, symbol, timestamp),
                 )
                 updated_entry = cur.fetchone()
                 conn.commit()
-                
-                return jsonify({
-                    "message": "Stock data updated successfully",
-                    "data": updated_entry
-                }), 200
+
+                return jsonify(
+                    {
+                        "message": "Stock data updated successfully",
+                        "data": updated_entry,
+                    }
+                ), 200
             else:
-                # Insert new entry
                 cur.execute(
                     """
                     INSERT INTO StockPrices (symbol, timestamp, open, high, low, close, volume)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     RETURNING *
                     """,
-                    (symbol, timestamp, open_price, high, low, close, volume)
+                    (symbol, timestamp, open_price, high, low, close, volume),
                 )
                 new_entry = cur.fetchone()
                 conn.commit()
-                
-                return jsonify({
-                    "message": "Stock data added successfully",
-                    "data": new_entry
-                }), 201
-    
+
+                return jsonify(
+                    {"message": "Stock data added successfully", "data": new_entry}
+                ), 201
+
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500

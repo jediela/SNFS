@@ -13,7 +13,7 @@ def create_app():
     from app.routes.request_routes import request_bp
     from app.routes.portfolio_routes import portfolio_bp
     from app.routes.stock_routes import stock_bp
-    from app.routes.cash_transactions_routes import cash_transactions_bp 
+    from app.routes.cash_transactions_routes import cash_transactions_bp
     from app.routes.friends_routes import friends_bp
 
     # Register blueprints
@@ -25,5 +25,5 @@ def create_app():
     app.register_blueprint(stock_bp)
     app.register_blueprint(cash_transactions_bp)
     app.register_blueprint(friends_bp)
-    
+
     return app
